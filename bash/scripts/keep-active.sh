@@ -11,6 +11,7 @@ function keep_warm {
 	done
 
 	curl -sL --rate 30/m --retry 3 --retry-delay 2 ${CURL_REQ_STRING} >/dev/null
+	exit 0
 }
 
 keep_warm
