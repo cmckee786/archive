@@ -5,7 +5,7 @@
 # Requires mdBook semantic version input from command line
 # For example 'binary-validation.sh v0.1.15'
 
-set -euo pipefail
+set -eo pipefail
 
 MDBOOK_VERSION=$1
 declare json
@@ -17,14 +17,25 @@ json_setup() {
 	| .[].assets
 	| map(select(.name==\"mdbook-${MDBOOK_VERSION}-x86_64-unknown-linux-gnu.tar.gz\"))
 	"
-	printf "mdBook Binary script executing..."
-	printf "\nQuerying GH API for JSON %s mdBook record..." "${MDBOOK_VERSION}"
+	printf "mdBook Binary script executing...\n"
+	printf "Querying GH API for JSON %s mdBook record...\n" "${MDBOOK_VERSION}"
 
-	json="$(gh api repos/rust-lang/mdBook/releases?per_page=5 --jq "${jquery}" ||
+	json="$(curl -sL \
+		-H "Accept: application/vnd.github+json" \
+		-H "X-GitHub-Api-Version: 2022-11-28" \
+		https://api.github.com/repos/rust-lang/mdBook/releases?per_page=10 \
+		| jq "${jquery}")" ||
 		{
-			printf "\nSomething may have gone wrong with the GH API request."
+			printf "Something went wrong with the GH API request. Dumping curl error.\n" 2>&1
 			exit 1
-		} 1>&2)"
+		}
+
+	# TODO Implement GH TOKEN in the future?
+	# gh api repos/rust-lang/mdBook/releases?per_page=5 --jq "${jquery}" > "${json}"||
+	# 	{
+	# 		printf "Something may have gone wrong with the GH API request.\n" >&2
+	# 		exit 1
+	# 	}
 }
 
 api_fetch() {
@@ -35,7 +46,7 @@ api_fetch() {
 	local zip_digest
 
 	if [[ -n "${json}" ]]; then
-		printf "\nParsing API JSON return data and assigning variables...\n\n"
+		printf "Parsing API JSON return data and assigning variables...\n\n"
 
 		dl_url="$(jq -r '.[].browser_download_url' <<<"${json}")"
 		api_digest="$(jq -r '.[].digest' <<<"${json}" | cut -d: -f2)"
@@ -47,10 +58,10 @@ api_fetch() {
 		curl -LO --progress-bar "$dl_url"
 		zip_digest=$(sha256sum "./${zip}" | awk '{print $1}')
 
-		printf "\nZIP_DIGEST: %s\n" "${zip_digest}"
+		printf "\nZIP_DIGEST: %s\n\n" "${zip_digest}"
 
 		if [[ "${api_digest}" = "${zip_digest}" ]]; then
-			printf "\nDigest check succeeded!\nCleaning up...\nmdBook binary unzipped and ready for execution!"
+			printf "Digest check succeeded!\nCleaning up...\nmdBook binary unzipped and ready for execution!"
 			tar xfz "${zip}"
 			rm -f "${zip}"
 			exit 0
