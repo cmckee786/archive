@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# binary-validator.sh v1.1.0
+# binary-validator.sh v1.1.2
 #
 # Authored by:
 # github.com/cmckee786
@@ -72,7 +72,7 @@ if [ "$OPTIND" -gt "$#" ]; then
     exit 1
 fi
 
-shift $(($OPTIND - 1))
+shift $((OPTIND - 1))
 if [[ -n "$1" && "$1" =~ $reg_pattern ]]; then
     MDBOOK_VERSION="$1"
 elif [[ ! "$1" =~ $reg_pattern ]]; then
