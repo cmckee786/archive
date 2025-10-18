@@ -72,14 +72,15 @@ podman pod start pod_pihole_rootless
 init() {
 	local service_dir="$HOME"/.config/system/user/
 
-	if [[ $(id piholeserviceacc) ]]; then
-		pass
-	else
+	if [[ ! $(id piholeserviceacc) ]]; then
 		sudo useradd -s /usr/bin/bash piholeserviceacc
 	fi
 
+	if [[ ! -d $service_dir ]]; then
+		mkdir -p "$service_dir" && cd "$service_dir"
+	fi
+
 	pihole_start
-	mkdir -p "$service_dir" && cd "$service_dir"
 	podman generate systemd --new -nf pod_pihole_rootless
 	# sed -i /User=piholeserviceacc/ pod-pod_pihole_rootless
 	systemctl --user enable --now pod-pod_pihole_rootless
