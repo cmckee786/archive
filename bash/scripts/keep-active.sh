@@ -10,7 +10,7 @@ function keep_warm {
 		CURL_REQ_STRING+="${BASE_URL}${item} "
 	done
 
-	curl -sL --rate 30/m --retry 3 --retry-delay 2 ${CURL_REQ_STRING} >/dev/null
+	curl -sL --rate 60/m --retry 3 --retry-delay 2 ${CURL_REQ_STRING} >/dev/null
 	exit 0
 }
 
