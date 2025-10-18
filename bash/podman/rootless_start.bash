@@ -4,6 +4,10 @@
 # Authored by Christian McKee - cmckee786@github.com
 # Rootless pihole podman container pipeline
 
+# Allows use of "podman auto-update" to easily update
+# pod images based on this label: --label "io.containers.autoupdate=registry"
+# Be sure to prune old images periodically
+
 # NOTE: Rootless containers cannot create network devices
 # so a tap device is made and NAT is implemented on the host
 
@@ -63,6 +67,7 @@ podman pod start pod_pihole_rootless
 
 #TODO:
   # - Test generation of systemd unit
+  # - Test implementation of service account
   # - Test for necessary command binaries, install dependencies if absent
 init() {
 	local service_dir="$HOME"/.config/system/user/
