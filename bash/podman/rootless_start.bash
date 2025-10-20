@@ -20,10 +20,10 @@
 #     than editing sys.ipv4.unprivileged_port_start
 # - Implement "service account"
 # - Systemd Unit file that utilizes service account
-# - Enable service unit
+# - Enable service unit and persist service account login
 
 
-#NOTE: Change these global variables to match your environment
+#NOTE: Change/remove/add global variables to match your environment
 
 USER=chris
 REMOTE_TARGET=10.0.0.182
@@ -49,6 +49,7 @@ if [[ ! $(ssh ${USER}@rpi 'id piholeserviceacc') ]]; then
 		'"
 fi
 
+#NOTE: May or may not be a necessary step. My remote host only accepts SSH via keys
 if [[ ! -d "$HOME"/.ssh/piholeserviceacc/ ]]; then
 	mkdir -p "$HOME"/.ssh/piholeserviceacc/
 	ssh-keygen -t ed25519 -a 32 -f "$HOME"/.ssh/piholeserviceacc/pihole_stack
