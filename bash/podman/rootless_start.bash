@@ -112,7 +112,7 @@ systemctl --user enable pod-pod_pihole_rootless
 #NOTE: From here a decision must be made whether to redirect traffic
 # or modify privileged ports after verification of successful start of pod,
 # at the very least the Pihole front end should be accessible from
-# http(s)://{host_ip}:8080/admin
+# http(s)://{host_ip}:8080/admin if firewall allows port 8080
 #
 #NOTE: Possible firewall commands
 #	- sudo ufw allow from 127.0.0.1 to any port 8080 proto tcp
