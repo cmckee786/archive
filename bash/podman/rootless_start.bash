@@ -2,12 +2,15 @@
 
 #v 1.1.2
 # Authored by Christian McKee - cmckee786@github.com
+# For use with Raspi's on Debian 12 and podman v4.3.1
+
 # Rootless pihole podman container pipeline managed by
 # lingering service account
 
 # Allows use of "podman auto-update" to easily update
 # pod images based on this label: --label "io.containers.autoupdate=registry"
 # Be sure to prune old images periodically
+
 
 # NOTE: Rootless containers cannot create network devices
 # so a tap device is made and NAT is implemented on the host
@@ -110,6 +113,14 @@ loginctl enable-linger piholeserviceacc
 # or modify privileged ports after verification of successful start of pod,
 # at the very least the Pihole front end should be accessible from
 # http(s)://{host_ip}:8080/admin
+#
+#NOTE: Possible firewall commands
+#	- sudo ufw allow from 127.0.0.1 to any port 8080 proto tcp
+#	And further, /etc/ufw/before.rules in the section before `filter`
+#	- *nat
+# 		:PREROUTING ACCEPT [0:0]
+# 		-A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
+# 		COMMIT
 #
 #WARN: To restart from zero:
 # From remote host:
