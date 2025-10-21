@@ -121,7 +121,13 @@ loginctl enable-linger piholeserviceacc
 # 		:PREROUTING ACCEPT [0:0]
 # 		-A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
 # 		COMMIT
-#
+# 	- It is possible the system will need port forwarding enabled:
+# 		- /etc/sysctl.conf 
+# 		- net.ipv4.ip_forward = 1
+# 	- Otherwise unprivileged ports will need to be lowered to at minimum 53:
+# 		- /etc/sysctl.conf
+# 		- net.ipv4.ip_unprivileged_port_start = 1
+
 #WARN: To restart from zero:
 # From remote host:
 # 	loginctl disable-linger piholeserviceacc
