@@ -124,7 +124,8 @@ loginctl enable-linger piholeserviceacc
 # 	- It is possible the system will need port forwarding enabled:
 # 		- /etc/sysctl.conf 
 # 		- net.ipv4.ip_forward = 1
-# 	- Otherwise unprivileged ports will need to be lowered to at minimum 53:
+# 	- Otherwise unprivileged ports will need to be lowered to at minimum 53
+# 		- This is considered insecure by some
 # 		- /etc/sysctl.conf
 # 		- net.ipv4.ip_unprivileged_port_start = 1
 
