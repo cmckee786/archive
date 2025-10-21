@@ -51,6 +51,7 @@ if ! id piholeserviceacc &>/dev/null; then \
 	sudo bash -c '
 	useradd -m -s /usr/bin/bash piholeserviceacc
 	passwd -d piholeserviceacc
+	loginctl enable-linger piholeserviceacc
 	mkdir -p /home/piholeserviceacc/.config/systemd/user/
 	mkdir -p /home/piholeserviceacc/.ssh/
 	touch /home/piholeserviceacc/.ssh/authorized_keys
@@ -106,7 +107,6 @@ podman pod start pod_pihole_rootless
 podman generate systemd --new -nf pod_pihole_rootless
 mv *.service /home/piholeserviceacc/.config/systemd/user/
 systemctl --user enable pod-pod_pihole_rootless
-loginctl enable-linger piholeserviceacc
 "
 
 #NOTE: From here a decision must be made whether to redirect traffic
