@@ -124,7 +124,7 @@ systemctl --user enable pod-pod_pihole_rootless
 # 		COMMIT
 # 	- Otherwise unprivileged ports will need to be lowered to at minimum 53
 # 		- This could be considered insecure as a privileged user is generally
-# 		  expected at these ports
+# 		  expected at ports below 1024
 # 		- /etc/sysctl.conf
 # 		- net.ipv4.ip_unprivileged_port_start = 53
 
