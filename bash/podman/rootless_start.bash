@@ -28,7 +28,7 @@
 
 USER=chris # root user is preferred method, sudo used due to raspi configurations
 REMOTE_TARGET=10.0.0.182
-USER_PRIV_KEY="$HOME"/.ssh/raspi/rpi # may not be necessary
+USER_PRIV_KEY="$HOME"/.ssh/raspi/rpi # may not be necessary per environment
 REMOTE_PRIV_KEY="$HOME"/.ssh/piholeserviceacc/pihole_stack
 REMOTE_KEY="$HOME"/.ssh/piholeserviceacc/pihole_stack.pub
 
@@ -58,6 +58,7 @@ if ! id piholeserviceacc &>/dev/null; then \
 	chmod 600 /home/piholeserviceacc/.ssh/authorized_keys
 	chown -R piholeserviceacc:piholeserviceacc /home/piholeserviceacc'
 fi"
+
 ssh -F /dev/null -i "${REMOTE_PRIV_KEY}" piholeserviceacc@"${REMOTE_TARGET}" "\
 podman pod create \
     --infra \
