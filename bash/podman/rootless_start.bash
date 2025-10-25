@@ -44,7 +44,7 @@ if [[ ! -d "$HOME"/.ssh/piholeserviceacc/ ]]; then
 fi
 
 #NOTE: Remove -i USER_PRIV_KEY if remote target accessible by password
-#	-F /dev/null will ignore any config files
+#	-F /dev/null will ignore any ssh config files
 
 ssh -F /dev/null -i "${USER_PRIV_KEY}" "${USER}"@"${REMOTE_TARGET}" "\
 if ! id piholeserviceacc &>/dev/null; then \
@@ -114,18 +114,17 @@ systemctl --user enable pod-pod_pihole_rootless
 # at the very least the Pihole front end should be accessible from
 # http(s)://{host_ip}:8080/admin if firewall allows port 8080
 #
-#NOTE: Possible firewall commands
-#	- sudo ufw allow from 127.0.0.1 to any port 8080 proto tcp
-#	And further, /etc/ufw/before.rules in the section before `filter`
+#NOTE: Possible firewall commands - using UFW for Raspi host
+#	- ufw allow from 127.0.0.1 to any port 8080 proto tcp
+#	- This redirects the packet, note that this is not forwarding
+#	- And further, /etc/ufw/before.rules in the section before `filter`
 #	- *nat
 # 		:PREROUTING ACCEPT [0:0]
 # 		-A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
 # 		COMMIT
-# 	- It is possible the system will need port forwarding enabled:
-# 		- /etc/sysctl.conf
-# 		- net.ipv4.ip_forward = 1
 # 	- Otherwise unprivileged ports will need to be lowered to at minimum 53
-# 		- This is considered insecure by some
+# 		- This could be considered insecure as a privileged user is generally
+# 		  expected at these ports
 # 		- /etc/sysctl.conf
 # 		- net.ipv4.ip_unprivileged_port_start = 53
 
