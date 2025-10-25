@@ -11,7 +11,6 @@
 # pod images based on this label: --label "io.containers.autoupdate=registry"
 # Be sure to prune old images periodically
 
-
 # NOTE: Rootless containers cannot create network devices
 # so a tap device is made and NAT is implemented on the host
 # via slirp4netns
@@ -25,12 +24,11 @@
 # - Systemd Unit file that utilizes service account
 # - Enable service unit and persist service account login
 
-
 #NOTE: Change/remove/add global variables to match your environment
 
 USER=chris # root user is preferred method, sudo used due to raspi configurations
 REMOTE_TARGET=10.0.0.182
-USER_PRIV_KEY="$HOME"/.ssh/raspi/rpi
+USER_PRIV_KEY="$HOME"/.ssh/raspi/rpi # may not be necessary
 REMOTE_PRIV_KEY="$HOME"/.ssh/piholeserviceacc/pihole_stack
 REMOTE_KEY="$HOME"/.ssh/piholeserviceacc/pihole_stack.pub
 
@@ -116,8 +114,8 @@ systemctl --user enable pod-pod_pihole_rootless
 #
 #NOTE: Possible firewall commands - using UFW for Raspi host
 #	- ufw allow from 127.0.0.1 to any port 8080 proto tcp
-#	- This redirects the packet, note that this is not forwarding
-#	- And further, /etc/ufw/before.rules in the section before `filter`
+#		- This redirects the packet, note that this is not forwarding
+#	- And further, /etc/ufw/before.rules in the section before `filter`; this is required
 #	- *nat
 # 		:PREROUTING ACCEPT [0:0]
 # 		-A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
@@ -129,12 +127,12 @@ systemctl --user enable pod-pod_pihole_rootless
 # 		- net.ipv4.ip_unprivileged_port_start = 53
 
 #WARN: To restart from zero:
-# From remote host:
-# 	loginctl disable-linger piholeserviceacc
-# 	rm -rf /home/piholeserviceacc/
-# 	pkill -u piholeserviceacc
-#	userdel piholeserviceacc
-# From user host and account:
-#	rm -rf /home/{USER}/.ssh/piholeserviceacc/
+# - From remote host:
+# 	- loginctl disable-linger piholeserviceacc
+# 	- rm -rf /home/piholeserviceacc/
+# 	- pkill -u piholeserviceacc
+#	- userdel piholeserviceacc
+# - From user host and account:
+#	- rm -rf /home/{USER}/.ssh/piholeserviceacc/
 # The script can then rebuild the pod from scratch and create new keys,
 # service files and pod
