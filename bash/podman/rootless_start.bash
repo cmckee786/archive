@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#v 1.1.2
+#v 1.1.3
 # Authored by Christian McKee - cmckee786@github.com
-# For use with Raspi's on Debian 12 and podman v4.3.1
+# Made for use with Raspi's on Debian 12 and podman v4.3.1
 
 # Rootless pihole podman container pipeline managed by
 # lingering service account
@@ -13,9 +13,11 @@
 
 # NOTE: Rootless containers cannot create network devices
 # so a tap device is made and NAT is implemented on the host
-# via slirp4netns
+# via slirp4netns for versions of Podman 4.40 and below, use
+# Podman >v4.41 to benefit from pasta
 
 # Requirements:
+# - Podman, ideally passt packge over slirp4netns
 # - SSH access to remote target with admin privileges
 # - Redirect all port 80/443 and 53 incoming traffic via firewall
 #   - Redirect or front facing reverse proxy is considered more secure
@@ -28,7 +30,7 @@
 
 USER=chris # root user is preferred method, sudo used due to raspi configurations
 REMOTE_TARGET=10.0.0.182
-USER_PRIV_KEY="$HOME"/.ssh/raspi/rpi # may not be necessary per environment
+USER_PRIV_KEY="$HOME"/.ssh/raspi/rpi # keys may not be necessary per environment
 REMOTE_PRIV_KEY="$HOME"/.ssh/piholeserviceacc/pihole_stack
 REMOTE_KEY="$HOME"/.ssh/piholeserviceacc/pihole_stack.pub
 
