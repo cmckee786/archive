@@ -61,6 +61,7 @@ if ! id piholeserviceacc &>/dev/null; then \
 	chown -R piholeserviceacc:piholeserviceacc /home/piholeserviceacc'
 fi"
 
+# It is far simpler to use an ssh connection and login than su or other utilities
 ssh -F /dev/null -i "${REMOTE_PRIV_KEY}" piholeserviceacc@"${REMOTE_TARGET}" "\
 podman pod create \
     --infra \
