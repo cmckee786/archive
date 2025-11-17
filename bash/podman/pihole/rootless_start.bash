@@ -14,10 +14,10 @@
 # NOTE: Rootless containers cannot create network devices
 # so a tap device is made and NAT is implemented on the host
 # via slirp4netns for versions of Podman 4.40 and below, use
-# Podman >v4.41 to benefit from pasta
+# Podman >=v4.41 to benefit from pasta
 
 # Requirements:
-# - Podman, ideally passt packge over slirp4netns
+# - Podman, ideally passt network package over slirp4netns
 # - SSH access to remote target with admin privileges
 # - Redirect all port 80/443 and 53 incoming traffic via firewall
 #   - Redirect or front facing reverse proxy is considered more secure
