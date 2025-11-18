@@ -1,0 +1,18 @@
+[Unit]
+Description=cloudflared cloudflare DoH tunnel container
+
+[Container]
+Image=docker.io/cloudflare/cloudflared:latest
+ContainerName=cloudflared-cf
+Pod=pihole_rootless.pod
+AutoUpdate=registry
+
+Exec=proxy-dns --address 0.0.0.0 --port 5353 --upstream https://1.1.1.2/dns-query --upstream https://1.0.0.2/dns-query
+
+Environment="TUNNEL_MANAGEMENT_DIAGNOSTICS=false"
+
+[Service]
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target default.target

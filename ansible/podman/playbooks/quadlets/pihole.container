@@ -1,0 +1,20 @@
+[Unit]
+Description=cloudflared google DoH tunnel container
+
+[Container]
+Image=docker.io/pihole/pihole:latest
+ContainerName=pihole
+Pod=pihole_rootless.pod
+AutoUpdate=registry
+
+Timezone=local
+Environment="FTLCONF_webserver_api_password=change-me!"
+Environment="FTLCONF_dns_upstreams=cloudflared-cf#5353;cloudflared-goog#5353"
+
+Volume=pidata.volume:/etc/pihole/
+
+[Service]
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target default.target

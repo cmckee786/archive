@@ -1,0 +1,63 @@
+---
+
+# v 1.0.2
+# Authored by Christian McKee - cmckee786@github.com
+# Implements podman pihole container with a rootless service account
+
+- name: Setup system user and dependencies for rootless pihole
+  hosts: "CHANGE"
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: Install dependencies and create system user
+      ansible.builtin.package:
+        name:
+          - podman
+        state: present
+
+    - name: Create system user for podman
+      ansible.builtin.user:
+        name: piholeserviceacc
+        password: change-me!
+        state: present
+        system: true
+
+    - name: Linger pihole service account
+      ansible.builtin.command: loginctl enable-linger piholeserviceacc
+      changed_when: false
+
+    - name: Create necessary rootless directories
+      ansible.builtin.file:
+        path: /home/piholeserviceacc/.config/containers/systemd/
+        state: directory
+        owner: piholeserviceacc
+        group: piholeserviceacc
+        mode: '0755'
+
+    - name: Drop in quadlets
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: /home/piholeserviceacc/.config/containers/systemd/
+        owner: piholeserviceacc
+        group: piholeserviceacc
+        mode: '0755'
+      with_fileglob:
+        - ./quadlets/*
+
+    # Example redirect task
+    #
+    # - name: Redirect port 443 to 8443 with Rich Rule
+    #   ansible.posix.firewalld:
+    #     rich_rule: rule family=ipv4 forward-port port=443 protocol=tcp to-port=8443
+    #     zone: public
+    #     permanent: true
+    #     immediate: true
+    #     state: enabled
+
+    - name: Start podman via service units
+      ansible.builtin.systemd:
+        name: pihole_rootless-pod
+        state: started
+        scope: user
+      become_user: piholeserviceacc
