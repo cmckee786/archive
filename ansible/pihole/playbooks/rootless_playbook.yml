@@ -1,13 +1,15 @@
 ---
 
-# v 1.0.2
+# v 1.0.4
 # Authored by Christian McKee - cmckee786@github.com
 # Implements podman pihole container with a rootless service account
 
 - name: Setup system user, dependencies for rootless pihole, and deploy
-  hosts: # CHANGE
+  hosts: rpi
   gather_facts: false
   become: true
+  vars:
+    pihole_user: piholeserviceacc
 
   tasks:
     - name: Install dependencies and create system user
@@ -18,8 +20,8 @@
 
     - name: Create system user for podman
       ansible.builtin.user:
-        name: piholeserviceacc
-        password: change-me!
+        name: "{{ pihole_user }}"
+        password: change-me! # Ansible passes this as a hash value not cleartext in Linux
         state: present
         system: true
 
@@ -27,23 +29,59 @@
       ansible.builtin.command: loginctl enable-linger piholeserviceacc
       changed_when: false
 
+    - name: Ensure /etc/subuid and /etc/subgid files exist
+      ansible.builtin.file:
+        path: "/etc/{{ item }}"
+        state: touch
+        mode: '0644'
+      loop:
+        - subuid
+        - subgid
+
+    - name: Add subuid entry for the user
+      ansible.builtin.lineinfile:
+        path: /etc/subuid
+        regexp: "^{{ pihole_user }}:"
+        line: "{{ pihole_user }}:100000:65536"
+        state: present
+        create: true
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Add subgid entry for the user
+      ansible.builtin.lineinfile:
+        path: /etc/subgid
+        regexp: "^{{ pihole_user }}:"
+        line: "{{ pihole_user }}:100000:65536"
+        state: present
+        create: true
+        owner: root
+        group: root
+        mode: '0644'
+
+
     - name: Create necessary rootless directories
       ansible.builtin.file:
         path: /home/piholeserviceacc/.config/containers/systemd/
         state: directory
-        owner: piholeserviceacc
-        group: piholeserviceacc
+        owner: "{{ pihole_user }}"
+        group: "{{ pihole_user }}"
         mode: '0755'
 
     - name: Drop in quadlets
       ansible.builtin.copy:
         src: "{{ item }}"
         dest: /home/piholeserviceacc/.config/containers/systemd/
-        owner: piholeserviceacc
-        group: piholeserviceacc
+        owner: "{{ pihole_user }}"
+        group: "{{ pihole_user }}"
         mode: '0755'
       with_fileglob:
         - ./quadlets/*
+
+    - name: Create necessary rootless directories
+      ansible.builtin.command: podman system migrate
+      become_user: "{{ pihole_user }}"
 
     # Example redirect task
     #
@@ -62,4 +100,4 @@
         state: started
         daemon_reload: true
         scope: user
-      become_user: piholeserviceacc
+      become_user: "{{ pihole_user }}"
