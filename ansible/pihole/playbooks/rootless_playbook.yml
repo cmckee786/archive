@@ -4,8 +4,8 @@
 # Authored by Christian McKee - cmckee786@github.com
 # Implements podman pihole container with a rootless service account
 
-- name: Setup system user and dependencies for rootless pihole
-  hosts: "CHANGE"
+- name: Setup system user, dependencies for rootless pihole, and deploy
+  hosts: # CHANGE
   gather_facts: false
   become: true
 
@@ -55,6 +55,7 @@
     #     immediate: true
     #     state: enabled
 
+    # Quadlet [Install] section should persist these service units
     - name: Start podman via service units
       ansible.builtin.systemd:
         name: pihole_rootless-pod
