@@ -60,5 +60,6 @@
       ansible.builtin.systemd:
         name: pihole_rootless-pod
         state: started
+        daemon_reload: true
         scope: user
       become_user: piholeserviceacc
