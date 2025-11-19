@@ -12,7 +12,7 @@ Exec=proxy-dns --address 0.0.0.0 --port 5353 --upstream https://1.1.1.2/dns-quer
 Environment="TUNNEL_MANAGEMENT_DIAGNOSTICS=false"
 
 [Service]
-Restart=on-failure
+TimeoutStartSec=30s
 
 [Install]
 WantedBy=multi-user.target default.target

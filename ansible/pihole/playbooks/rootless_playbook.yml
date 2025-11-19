@@ -21,7 +21,7 @@
     - name: Create system user for podman
       ansible.builtin.user:
         name: "{{ pihole_user }}"
-        password: change-me! # Ansible passes this as a hash value not cleartext in Linux
+        password: change-me!
         state: present
         system: true
 

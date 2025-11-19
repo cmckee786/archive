@@ -14,7 +14,7 @@ Environment="FTLCONF_dns_upstreams=cloudflared-cf#5353;cloudflared-goog#5353"
 Volume=pidata.volume:/etc/pihole/
 
 [Service]
-Restart=on-failure
+TimeoutStartSec=30s
 
 [Install]
 WantedBy=multi-user.target default.target
