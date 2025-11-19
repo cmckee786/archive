@@ -9,6 +9,7 @@ AutoUpdate=registry
 
 Exec=proxy-dns --address 0.0.0.0 --port 5353 --upstream https://8.8.8.8/dns-query --upstream https://8.8.4.4/dns-query
 
+Pull=never
 Environment="TUNNEL_MANAGEMENT_DIAGNOSTICS=false"
 
 [Service]

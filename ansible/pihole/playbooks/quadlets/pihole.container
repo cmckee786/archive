@@ -7,6 +7,7 @@ ContainerName=pihole
 Pod=pihole_rootless.pod
 AutoUpdate=registry
 
+Pull=never
 Timezone=local
 Environment="FTLCONF_webserver_api_password=change-me!"
 Environment="FTLCONF_dns_upstreams=cloudflared-cf#5353;cloudflared-goog#5353"
