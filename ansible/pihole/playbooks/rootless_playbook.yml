@@ -5,7 +5,7 @@
 # Implements podman pihole container with a rootless service account
 
 - name: Setup system user, dependencies for rootless pihole, and deploy
-  hosts: rpi
+  hosts: # CHANGE ME!
   gather_facts: false
   become: true
   vars:
