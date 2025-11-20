@@ -1,5 +1,5 @@
 [Unit]
-Description=cloudflared google DoH tunnel container
+Description=rootless cloudflared google DoH tunnel container
 
 [Container]
 Image=docker.io/cloudflare/cloudflared:latest
@@ -11,9 +11,6 @@ Exec=proxy-dns --address 0.0.0.0 --port 5353 --upstream https://8.8.8.8/dns-quer
 
 Pull=never
 Environment="TUNNEL_MANAGEMENT_DIAGNOSTICS=false"
-
-[Service]
-TimeoutStartSec=30s
 
 [Install]
 WantedBy=multi-user.target default.target

@@ -51,6 +51,7 @@
         regexp: "^{{ pihole_user }}:"
         line: "{{ pihole_user }}:100000:65536"
         state: present
+      register: lineinfile
 
     - name: Create necessary rootless directories
       ansible.builtin.file:
@@ -75,14 +76,14 @@
         name: "{{ item.image }}"
         state: present
       loop:
-        - docker.io/pihole/pihole:latest
-        - docker.io/cloudflare/cloudflared:latest
+        - image: docker.io/pihole/pihole:latest
+        - image: docker.io/cloudflare/cloudflared:latest
       become_user: "{{ pihole_user }}"
 
     - name: Implement sub(g)uid changes
       ansible.builtin.command: podman system migrate
-      changed_when: false
       become_user: "{{ pihole_user }}"
+      when: lineinfile.changed
 
     # Example redirect task
     #

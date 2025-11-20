@@ -1,5 +1,5 @@
 [Unit]
-Description=cloudflared google DoH tunnel container
+Description=rootless pihole container
 
 [Container]
 Image=docker.io/pihole/pihole:latest
@@ -12,10 +12,7 @@ Timezone=local
 Environment="FTLCONF_webserver_api_password=change-me!"
 Environment="FTLCONF_dns_upstreams=cloudflared-cf#5353;cloudflared-goog#5353"
 
-Volume=pidata.volume:/etc/pihole/
-
-[Service]
-TimeoutStartSec=30s
+Volume=piholedata:/etc/pihole/
 
 [Install]
 WantedBy=multi-user.target default.target
