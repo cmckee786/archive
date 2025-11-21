@@ -12,7 +12,7 @@ Timezone=local
 Environment="FTLCONF_webserver_api_password=change-me!"
 Environment="FTLCONF_dns_upstreams=cloudflared-cf#5353;cloudflared-goog#5353"
 
-Volume=piholedata:/etc/pihole/
+Volume=piholedata:/etc/pihole/:z
 
 [Install]
 WantedBy=multi-user.target default.target

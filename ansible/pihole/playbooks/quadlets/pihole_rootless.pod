@@ -3,7 +3,8 @@ PodName=pihole_rootless
 Network=pasta
 PublishPort=8080:80
 PublishPort=8443:443
-PublishPort=10053:53
+PublishPort=10053:53/tcp
+PublishPort=10053:53/udp
 
 [Install]
 WantedBy=multi-user.target default.target
