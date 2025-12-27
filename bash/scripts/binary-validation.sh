@@ -1,14 +1,12 @@
 #!/bin/bash
 
-# binary-validator.sh v1.1.2
+# binary-validator.sh v1.1.4
 #
 # Authored by:
 # github.com/cmckee786
 # github.com/Kolkhis
 #
 # Targeting mdBook version v0.4.52 as of Aug, 2025
-# Only requests 5 latest release records, remove ?per_page=5 to
-# fetch all from logic to request all records
 #
 # Requires mdBook semantic version input from command line
 # For example 'binary-validation.sh v0.1.15'
@@ -122,7 +120,7 @@ json_setup() {
     json="$(curl -sL \
         -H "Accept: application/vnd.github+json" \
         -H "X-GitHub-Api-Version: 2022-11-28" \
-        https://api.github.com/repos/rust-lang/mdBook/releases?per_page=5 |
+        https://api.github.com/repos/rust-lang/mdBook/releases |
         jq "$jquery")" ||
         {
             printf "Something went wrong with the GH API request. Consider set -x for debugging.\n" 1>&2
