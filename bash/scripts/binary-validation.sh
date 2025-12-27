@@ -188,7 +188,7 @@ validation-decision() {
 
     if [[ $EXTRACT -eq 1 ]]; then
         tar xfz "$zip"
-        printf "Extracting binary for use...\nBinary is ready for use!"
+        printf "Extracting binary for use...\nBinary is ready for use!\n"
     fi
     [[ -e $zip ]] && rm -f "$zip"
 }
