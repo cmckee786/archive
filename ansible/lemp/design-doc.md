@@ -5,19 +5,24 @@ migration to 1C/1GB/25GB Linode virtual machine (VM). This migration is intended
 infrastructure from a 'snowflake' implementation into ansible playbooks,possibly terraform, and ultimately
 infrastructure as code (IaC).
 
-## Technologies to be Used
+### Technologies and Frameworks to be Used
 
 - Rocky 10
 - Podman and Chainguard Secure Container images
 - Ansible, Terraform
+- Cloudflare Domain services and Security infrastructure
 - Center for Internet Security (CIS) Benchmarks
+- NIST CSF 2.0 and Profiles
+- OpenSCAP
 
-## Monitoring and Logging (TBD)
+### Monitoring and Logging (TBD)
 
 - Linode provided dashboard
 - Grafana Alloy
     - Pulled downstream to local SoC/NoC implementation
 - `collectd` (?)
+
+### Procedure
 
 #### Phase 1 - Migration Preparation
 
@@ -36,7 +41,7 @@ Inventory and pull necessary configs/assets for chainguard implementation
         - Wordpress, wp-config.php
         - SSH, /etc/ssh/sshd_config.d/ /etc/ssh/sshd_config
 
-3. Compress and pull MariaDB database to local storage
+3. Compress and pull snowflake MariaDB database to local storage
     - `mariadb-backup`, `tar cfzv`, `rsync`
         - `mariadb-backup --backup`, `mariadb-backup --prepare`
         - `rsync avzh`, `chown -R mysqluser:mysqluser {db-dir}`
@@ -61,14 +66,14 @@ differences between Rocky provided image/kernel and Linode image/kernel
         - `oscap` (?)
     - Firewall tasks
         - `firewalld`, zones, services
-    - Package/Dependencies tasks
-        - `git`, `podman`
+    - Package/Dependency tasks
+        - `podman`, `python`, `ssh`
     - Create user tasks
         - /etc/subuid, /etc/subgid (100000:65536)
     - Drop in Quadlets and create Podman volumes tasks
         - implement necessary /.config/containers/systemd user directories
     - Pull in Wordpress assets/config tasks
-        - `podman import {wordpress.tar.gz}`
+        - `podman volume import {wordpress.tar.gz}`
     - Pull in Nginx config and domain certificate tasks
 
 3. Secrets implementation
