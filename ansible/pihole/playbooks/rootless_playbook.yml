@@ -1,11 +1,21 @@
 ---
 
-# v 1.0.6
+# v 1.0.9
 # Authored by Christian McKee - cmckee786@github.com
 # Implements podman pihole container with a rootless service account
+#
+# Requires Podman >=4.4, firewalld
+#
+# Tested on:
+# Operating System: Rocky Linux 9.7 (Blue Onyx)
+# CPE OS Name: cpe:/o:rocky:rocky:9::baseos
+# Kernel: Linux 6.1.31-v8.1.el9.altarch
+# Architecture: arm64
+# SELinux: Disabled
+
 
 - name: Setup system user, dependencies for rootless pihole, and deploy
-  hosts: # CHANGE ME!
+  hosts: # Desired hosts
   gather_facts: false
   become: true
   vars:
@@ -16,8 +26,11 @@
       ansible.builtin.package:
         name:
           - podman
+          - firewalld
         state: present
 
+    # Password field is taken in as a hash value. Ideally an ansible var from
+    # Ansible vault or other secret tool is used here
     - name: Create system user for podman
       ansible.builtin.user:
         name: "{{ pihole_user }}"
@@ -25,9 +38,10 @@
         state: present
         system: true
 
-    - name: Linger pihole service account
+    - name: Enable linger for pihole service account
       ansible.builtin.command: loginctl enable-linger piholeserviceacc
-      changed_when: false
+      args:
+        creates: /var/lib/systemd/linger/piholeserviceacc
 
     - name: Ensure /etc/subuid and /etc/subgid files exist
       ansible.builtin.file:
@@ -61,7 +75,7 @@
         group: "{{ pihole_user }}"
         mode: '0750'
 
-    - name: Drop in quadlets
+    - name: Copy over quadlets to remote host
       ansible.builtin.copy:
         src: "{{ item }}"
         dest: /home/piholeserviceacc/.config/containers/systemd/
@@ -69,7 +83,7 @@
         group: "{{ pihole_user }}"
         mode: '0750'
       with_fileglob:
-        - ./quadlets/*
+        - quadlets/*
 
     - name: Pull images to service account
       containers.podman.podman_image:
@@ -79,21 +93,28 @@
         - image: docker.io/pihole/pihole:latest
         - image: docker.io/cloudflare/cloudflared:latest
       become_user: "{{ pihole_user }}"
+      become: true
 
-    - name: Implement sub(g)uid changes
+    - name: Implement sub(g)uid changes if necessary
       ansible.builtin.command: podman system migrate
       become_user: "{{ pihole_user }}"
+      become: true
       when: lineinfile.changed
+      changed_when: "changed == true"
 
-    # Example redirect task
-    #
-    # - name: Redirect port 443 to 8443 with Rich Rule
-    #   ansible.posix.firewalld:
-    #     rich_rule: rule family=ipv4 forward-port port=443 protocol=tcp to-port=8443
-    #     zone: public
-    #     permanent: true
-    #     immediate: true
-    #     state: enabled
+    - name: Redirect host ports to container ports with Rich Rules
+      ansible.posix.firewalld:
+        rich_rule: "{{ item.rich_rule }}"
+        zone: public
+        permanent: true
+        immediate: true
+        state: enabled
+      loop:
+        - rich_rule: rule family=ipv4 forward-port port=80 protocol=tcp to-port=8080
+        - rich_rule: rule family=ipv4 forward-port port=443 protocol=tcp to-port=8443
+        - rich_rule: rule family=ipv4 forward-port port=53 protocol=tcp to-port=10053
+        - rich_rule: rule family=ipv4 forward-port port=53 protocol=udp to-port=10053
+      become: true
 
     # Quadlet [Install] section should persist these service units
     - name: Start podman via service units
@@ -103,3 +124,4 @@
         daemon_reload: true
         scope: user
       become_user: "{{ pihole_user }}"
+      become: true
