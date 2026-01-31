@@ -30,7 +30,7 @@ RESET: str = "\033[0m"
 WORKER_COUNT = 10
 
 # Regex intended to match http(s) links unique to this project
-REGEX: str = r"(?<!\[)\bhttps?://\S+\b/?"
+REGEX: str = r"(?<!\[)https?://(?![^\s]*localhost)\S+\b/?"
 PATTERN: re.Pattern = re.compile(REGEX)
 
 CWD: Path = Path.cwd()
@@ -182,22 +182,20 @@ def get_unique_links(
     for path in file_paths:
         try:
             with open(path, "r", encoding="utf-8") as f:
-                contents = f.read().splitlines()
-                for i, line in enumerate(contents, 1):
+                for i, line in enumerate(f, 1):
                     str_match = PATTERN.search(line)
-                    if str_match:
-                        match = str_match.group(0)
-                        # Some URLs have nested resource URIs with parenthesis
-                        # i.e: https://en.wikipedia.org/wiki/C_(programming_language)
-                        if "(" in match and "localhost" not in match:
-                            split_match = match.split("/")
-                            if "(" in split_match[-1] and ")" not in split_match[-1]:
-                                split_match[-1] = split_match[-1] + ")"
-                                match = "/".join(split_match)
-                        elif "localhost" in match:
-                            match = ""
-                    else:
-                        match = ""
+                    if not str_match:
+                        continue
+                    match = str_match.group(0)
+                    # Some URLs have nested resource URIs with parenthesis
+                    # i.e: https://en.wikipedia.org/wiki/C_(programming_language)
+                    if "(" in match:
+                        parts = match.split("/")
+                        if len(parts) > 1 and "(" in parts[-1] and ")" not in parts[-1]:
+                            match = f"{match})"
+                    # It is simpler to remove potential \n characters after match based on regex
+                    elif "\\" in match:
+                        match = match.split("\\")[0]
                     if match:
                         link_item = {"link": match, "file": path, "line": i}
                         matched_links.append(link_item)
