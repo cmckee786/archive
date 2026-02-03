@@ -22,7 +22,7 @@ declare json
 reg_pattern='^v?([0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}$)'
 
 usage() {
-    printf "
+  printf "
     SYNOPSIS
     This script attempts to download and validate the mdBook binary directly from the GitHub API for
     automatic deployment of mdBook documentation workflows.
@@ -51,154 +51,154 @@ usage() {
 }
 
 while getopts "sih" option; do
-    case "$option" in
-    s) SKIP_DIGEST=1 ;;
-    i) INTERACTIVE=1 ;;
-    h)
-        usage
-        exit
-        ;;
-    \?)
-        printf >&2 "Unknown argument!\n./binary-validation.sh \$version [options] [-s][-i][-h]"
-        exit 1
-        ;;
-    esac
+  case "$option" in
+  s) SKIP_DIGEST=1 ;;
+  i) INTERACTIVE=1 ;;
+  h)
+    usage
+    exit
+    ;;
+  \?)
+    printf >&2 "Unknown argument!\n./binary-validation.sh \$version [options] [-s][-i][-h]"
+    exit 1
+    ;;
+  esac
 done
 
 if [ "$OPTIND" -gt "$#" ]; then
-    echo "Missing mdBook version!"
-    exit 1
+  echo "Missing mdBook version!"
+  exit 1
 fi
 
 shift $((OPTIND - 1))
 if [[ -n "$1" && "$1" =~ $reg_pattern ]]; then
-    MDBOOK_VERSION="$1"
+  MDBOOK_VERSION="$1"
 elif [[ ! "$1" =~ $reg_pattern ]]; then
-    printf >&2 "Unrecognized mdBook version pattern, script accepts semantic version for example: 0.4.52"
-    exit 1
+  printf >&2 "Unrecognized mdBook version pattern, script accepts semantic version for example: 0.4.52"
+  exit 1
 fi
 
 # If the mdbook version is pre-digest version (<0.4.52), ask for user validation
 interactive-download() {
-    if [[ $INTERACTIVE -gt 0 ]]; then
-        local -l choice
-        until [[ $choice =~ ^[Yy|nN]$ ]]; do
-            read -r -p "Do you want to continue [y/N]? " choice
-            choice=${choice:-N}
-            case $choice in
-            y*)
-                printf "Proceeding with download.\n"
-                EXTRACT=1
-                ;;
-            n*)
-                printf "Cancelling download.\n"
-                ;;
-            *)
-                printf "Invalid input! Please choose [y/N]. \n"
-                ;;
-            esac
-        done
-    else
-        printf "Non-interactive download, proceeding...\n"
-        return 0
-    fi
+  if [[ $INTERACTIVE -gt 0 ]]; then
+    local -l choice
+    until [[ $choice =~ ^[Yy|nN]$ ]]; do
+      read -r -p "Do you want to continue [y/N]? " choice
+      choice=${choice:-N}
+      case $choice in
+      y*)
+        printf "Proceeding with download.\n"
+        EXTRACT=1
+        ;;
+      n*)
+        printf "Cancelling download.\n"
+        ;;
+      *)
+        printf "Invalid input! Please choose [y/N]. \n"
+        ;;
+      esac
+    done
+  else
+    printf "Non-interactive download, proceeding...\n"
+    return 0
+  fi
 }
 
 json_setup() {
 
-    if [[ ! $MDBOOK_VERSION =~ v ]]; then
-        MDBOOK_VERSION="v$MDBOOK_VERSION"
-    fi
-    local jquery="
+  if [[ ! $MDBOOK_VERSION =~ v ]]; then
+    MDBOOK_VERSION="v$MDBOOK_VERSION"
+  fi
+  local jquery="
 	map(select(.tag_name==\"$MDBOOK_VERSION\"))
 	| .[].assets
 	| map(select(.name==\"mdbook-$MDBOOK_VERSION-x86_64-unknown-linux-gnu.tar.gz\"))
 	"
-    printf "mdBook Binary script executing...\n"
-    printf "Querying GH API for JSON %s mdBook record...\n" "$MDBOOK_VERSION"
+  printf "mdBook Binary script executing...\n"
+  printf "Querying GH API for JSON %s mdBook record...\n" "$MDBOOK_VERSION"
 
-    json="$(curl -sL \
-        -H "Accept: application/vnd.github+json" \
-        -H "X-GitHub-Api-Version: 2022-11-28" \
-        https://api.github.com/repos/rust-lang/mdBook/releases |
-        jq "$jquery")" ||
-        {
-            printf "Something went wrong with the GH API request. Consider set -x for debugging.\n" 1>&2
-            return 1
-        }
+  json="$(curl -sL \
+    -H "Accept: application/vnd.github+json" \
+    -H "X-GitHub-Api-Version: 2022-11-28" \
+    https://api.github.com/repos/rust-lang/mdBook/releases |
+    jq "$jquery")" ||
+    {
+      printf "Something went wrong with the GH API request. Consider set -x for debugging.\n" 1>&2
+      return 1
+    }
 
-    # TODO Implement GH TOKEN in the future?
-    # gh api repos/rust-lang/mdBook/releases?per_page=5 --jq "${jquery}" > "${json}"||
-    # 	{
-    # 		printf "Something may have gone wrong with the GH API request.\n" >&2
-    # 		exit 1
-    # 	}
+  # TODO Implement GH TOKEN in the future?
+  # gh api repos/rust-lang/mdBook/releases?per_page=5 --jq "${jquery}" > "${json}"||
+  # 	{
+  # 		printf "Something may have gone wrong with the GH API request.\n" >&2
+  # 		exit 1
+  # 	}
 }
 
 binary_fetch() {
 
-    if [[ -n "$json" ]]; then
-        printf "Parsing API JSON return data and fetching binary...\n\n"
-        curl -LO --progress-bar "$(jq -r '.[].browser_download_url' <<<"$json")" || {
-            printf >&2 "Failed to download mkBook binary!\n" && return 1
-        }
-        printf "\n"
-    else
-        printf "\nThe processed JSON record appears to be empty, queried version may not exist...\nExiting..."
-        return 1
-    fi
+  if [[ -n "$json" ]]; then
+    printf "Parsing API JSON return data and fetching binary...\n\n"
+    curl -LO --progress-bar "$(jq -r '.[].browser_download_url' <<<"$json")" || {
+      printf >&2 "Failed to download mkBook binary!\n" && return 1
+    }
+    printf "\n"
+  else
+    printf "\nThe processed JSON record appears to be empty, queried version may not exist...\nExiting..."
+    return 1
+  fi
 }
 
 validation-decision() {
-    local api_digest
-    local zip_digest
-    local zip
+  local api_digest
+  local zip_digest
+  local zip
 
-    api_digest="$(jq -r '.[].digest' <<<"${json}" | cut -d: -f2)"
-    zip="$(jq -r '.[].name' <<<"$json")"
-    zip_digest="$(sha256sum "$zip" | awk '{print $1}')"
+  api_digest="$(jq -r '.[].digest' <<<"${json}" | cut -d: -f2)"
+  zip="$(jq -r '.[].name' <<<"$json")"
+  zip_digest="$(sha256sum "$zip" | awk '{print $1}')"
 
-    printf "%2s %s\n" "ZIP:" "$zip" "API_DIGEST:" "$api_digest"
-    printf "ZIP_DIGEST: %s\n\n" "$zip_digest"
+  printf "%2s %s\n" "ZIP:" "$zip" "API_DIGEST:" "$api_digest"
+  printf "ZIP_DIGEST: %s\n\n" "$zip_digest"
 
-    if [[ $SKIP_DIGEST -eq 1 ]]; then
-        EXTRACT=1
-        printf "Skipping digest check, fetching binary...\n"
-    elif [[ "$api_digest" == 'null' && $INTERACTIVE -eq 1 ]]; then
-        printf "This version of mdBook (%s) pre-dates the SHA digest feature of the GitHub API and cannot be validated.\n" "$MDBOOK_VERSION"
-        interactive-download || {
-            printf >&2 "Could not proceed with download.\n"
-        }
-    elif [[ "$api_digest" == "$zip_digest" && $INTERACTIVE -eq 1 ]]; then
-        printf "The mdBook binary has been successfully validated.\n"
-        interactive-download || {
-            printf >&2 "Could not proceed with download.\n"
-        }
-    elif [[ "$api_digest" == 'null' ]]; then
-        printf "Digest could not be gathered from the API, likely an older version (<0.4.52).\nExiting..."
-    elif [[ "$api_digest" = "$zip_digest" ]]; then
-        printf "Digest check succeeded!\n"
-        EXTRACT=1
-    else
-        printf "\nThe API digest appears to be different than the downloaded binary digest:"
-        printf "\n%2s %s" "API sha:" "$api_digest" "ZIP sha:" "$zip_digest"
-        printf "\n\nDumping JSON record and exiting...\n\n"
-        echo "$json" | jq '.'
-    fi
+  if [[ $SKIP_DIGEST -eq 1 ]]; then
+    EXTRACT=1
+    printf "Skipping digest check, fetching binary...\n"
+  elif [[ "$api_digest" == 'null' && $INTERACTIVE -eq 1 ]]; then
+    printf "This version of mdBook (%s) pre-dates the SHA digest feature of the GitHub API and cannot be validated.\n" "$MDBOOK_VERSION"
+    interactive-download || {
+      printf >&2 "Could not proceed with download.\n"
+    }
+  elif [[ "$api_digest" == "$zip_digest" && $INTERACTIVE -eq 1 ]]; then
+    printf "The mdBook binary has been successfully validated.\n"
+    interactive-download || {
+      printf >&2 "Could not proceed with download.\n"
+    }
+  elif [[ "$api_digest" == 'null' ]]; then
+    printf "Digest could not be gathered from the API, likely an older version (<0.4.52).\nExiting..."
+  elif [[ "$api_digest" = "$zip_digest" ]]; then
+    printf "Digest check succeeded!\n"
+    EXTRACT=1
+  else
+    printf "\nThe API digest appears to be different than the downloaded binary digest:"
+    printf "\n%2s %s" "API sha:" "$api_digest" "ZIP sha:" "$zip_digest"
+    printf "\n\nDumping JSON record and exiting...\n\n"
+    echo "$json" | jq '.'
+  fi
 
-    if [[ $EXTRACT -eq 1 ]]; then
-        tar xfz "$zip"
-        printf "Extracting binary for use...\nBinary is ready for use!\n"
-    fi
-    [[ -e $zip ]] && rm -f "$zip"
+  if [[ $EXTRACT -eq 1 ]]; then
+    tar xfz "$zip"
+    printf "Extracting binary for use...\nBinary is ready for use!\n"
+  fi
+  [[ -e $zip ]] && rm -f "$zip"
 }
 
 if [[ -n "$MDBOOK_VERSION" ]]; then
-    json_setup
-    binary_fetch
-    validation-decision || {
-        printf >&2 "Digest check failed!\n"
-    }
+  json_setup
+  binary_fetch
+  validation-decision || {
+    printf >&2 "Digest check failed!\n"
+  }
 else
-    printf >&2 "MDBOOK_VERSION appears to be empty! Script requires a semantic version, for example: 0.4.52\n"
+  printf >&2 "MDBOOK_VERSION appears to be empty! Script requires a semantic version, for example: 0.4.52\n"
 fi

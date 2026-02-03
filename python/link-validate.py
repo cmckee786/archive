@@ -27,7 +27,7 @@ RESET: str = "\033[0m"
 
 # If max_workers is None or not given, it will default
 # to the number of processors on the machine, multiplied by 5
-WORKER_COUNT = 10
+WORKER_COUNT = None
 
 # Regex intended to match http(s) links unique to this project
 REGEX: str = r"(?<!\[)https?://(?![^\s]*localhost)\S+\b/?"
@@ -131,7 +131,7 @@ def validate_link(matched_item: dict[str, str | int | Path]) -> tuple:
     """
     headers: dict = {
         "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Gecko/20100101 Firefox/143.0"
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0"
         ),
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.5",
@@ -177,7 +177,7 @@ def get_unique_links(
             else:
                 continue
         except PermissionError:
-            pass
+            continue
 
     for path in file_paths:
         try:
@@ -204,7 +204,7 @@ def get_unique_links(
                 file_matches = 0
         # Skip non-text files
         except UnicodeDecodeError:
-            pass
+            continue
 
     # Filter for unique links
     unique_links = list({i["link"]: i for i in reversed(matched_links)}.values())
@@ -257,24 +257,21 @@ def main() -> None:
 
         if test_links and parser.skip_validation is False:
             print("Attempting to resolve links for testing...")
-            count: int = 0
             with ThreadPoolExecutor(max_workers=WORKER_COUNT) as executor:
                 futures = {
                     executor.submit(validate_link, dict_item): dict_item
                     for dict_item in test_links
                 }
-                for future in as_completed(futures):
+                for i, future in enumerate(as_completed(futures), 1):
                     try:
                         validate_return, matched_item = future.result()
                         if validate_return[0] == 1:
                             failed_links.append((matched_item, validate_return))
-                            count += 1
                         elif validate_return[0] == 0:
                             successful_links.append(matched_item)
-                            count += 1
                         print(
-                            f"\rTesting links: {ORANGE}{count}{RESET}|{len(test_links)} "
-                            f"{(int(count/len(test_links) * 100)):.0f}%",
+                            f"\rTesting links: {ORANGE}{i}{RESET}|{len(test_links)} "
+                            f"{(int(i / len(test_links) * 100)):.0f}%",
                             end="",
                             flush=True,
                         )
@@ -285,17 +282,17 @@ def main() -> None:
         if successful_links and parser.skip_store is False:
             print(f"Appending successful links to {STORAGE_PATH}...")
             with open(STORAGE_PATH, "a", encoding="utf-8") as f_updated:
-                [f_updated.writelines(f'{link["link"]}\n') for link in successful_links]
+                [f_updated.writelines(f"{link['link']}\n") for link in successful_links]
             sort_file(STORAGE_PATH)
 
         if failed_links and parser.skip_validation is False:
             print(f"Failed Links: {RED}{len(failed_links)}{RESET}")
-            print(f"{'-'*20}")
+            print(f"{'-' * 20}")
             [
                 print(f"{item[0]['link']} {RED}{item[1][1]}{RESET}")
                 for item in failed_links
             ]
-            print(f"{'-'*20}")
+            print(f"{'-' * 20}")
             print(f"Writing report to {FAILED_REPORT_PATH}...")
             with open(FAILED_REPORT_PATH, "w", encoding="utf-8") as f_report:
                 [
@@ -311,13 +308,13 @@ def main() -> None:
             if parser.build_ignore:
                 print(f"Building new {IGNORED_PATH} file...")
                 with open(IGNORED_PATH, "w", encoding="utf-8") as f_ignore:
-                    [f_ignore.writelines(f'{link["link"]}\n') for link in failed_links]
+                    [f_ignore.writelines(f"{link['link']}\n") for link in failed_links]
                 sort_file(IGNORED_PATH)
 
             if parser.add_failed and parser.build_ignore is False:
                 print(f"Appending failed links to {IGNORED_PATH} file...")
                 with open(IGNORED_PATH, "a", encoding="utf-8") as f_ignore:
-                    [f_ignore.writelines(f'{link["link"]}\n') for link in failed_links]
+                    [f_ignore.writelines(f"{link['link']}\n") for link in failed_links]
                 sort_file(IGNORED_PATH)
 
         elif parser.skip_validation is True:

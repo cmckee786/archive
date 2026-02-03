@@ -1,0 +1,68 @@
+---
+# v 1.0.1
+# Authored by Christian McKee - cmckee786@github.com
+# Attempts to removes podman pihole pod and service account
+#
+# Tested on:
+# Operating System: Rocky Linux 9.7 (Blue Onyx)
+# CPE OS Name: cpe:/o:rocky:rocky:9::baseos
+# Kernel: Linux 6.1.31-v8.1.el9.altarch
+# Instruction Set: ARMv8-A
+# Architecture: arm64
+# SELinux: Disabled
+
+
+- name: Remove system user, cleanup hanging assets
+  hosts: # Desired hosts
+  gather_facts: false
+  become: true
+  vars:
+    pihole_user: piholeserviceacc
+
+  tasks:
+    - name: Stop podman pod and forcibly remove
+      ansible.builtin.command: "podman pod rm --force pihole_rootless"
+      register: removed
+      changed_when: removed.rc == 0
+      failed_when: removed.rc != 0 and "error" in removed.stdout
+      become: true
+      become_user: "{{ pihole_user }}"
+
+    - name: Stop podman pod and forcibly remove
+      ansible.builtin.command: "podman volume rm piholedata"
+      register: volume
+      changed_when: volume.rc == 0
+      failed_when: volume.rc != 0 and "error" in volume.stdout
+      become: true
+      become_user: "{{ pihole_user }}"
+
+    - name: Disable linger for pihole service account
+      ansible.builtin.command: "loginctl disable-linger {{ pihole_user }}"
+      args:
+        removes: /var/lib/systemd/linger/piholeserviceacc
+
+    - name: Delete system user
+      ansible.builtin.user:
+        name: "{{ pihole_user }}"
+        state: absent
+        system: true
+      until: true
+      delay: 2
+
+    - name: Remove necessary user home directories
+      ansible.builtin.file:
+        path: /home/piholeserviceacc/
+        state: absent
+
+    - name: Remove redirect rich rules
+      ansible.posix.firewalld:
+        rich_rule: "{{ item.rich_rule }}"
+        zone: public
+        immediate: true
+        permanent: true
+        state: disabled
+      loop:
+        - rich_rule: rule family=ipv4 forward-port port=80 protocol=tcp to-port=8080
+        - rich_rule: rule family=ipv4 forward-port port=443 protocol=tcp to-port=8443
+        - rich_rule: rule family=ipv4 forward-port port=53 protocol=tcp to-port=10053
+        - rich_rule: rule family=ipv4 forward-port port=53 protocol=udp to-port=10053

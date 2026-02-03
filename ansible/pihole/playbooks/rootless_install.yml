@@ -1,6 +1,5 @@
 ---
-
-# v 1.0.9
+# v 1.1.0
 # Authored by Christian McKee - cmckee786@github.com
 # Implements podman pihole container with a rootless service account
 #
@@ -10,6 +9,7 @@
 # Operating System: Rocky Linux 9.7 (Blue Onyx)
 # CPE OS Name: cpe:/o:rocky:rocky:9::baseos
 # Kernel: Linux 6.1.31-v8.1.el9.altarch
+# Instruction Set: ARMv8-A
 # Architecture: arm64
 # SELinux: Disabled
 
@@ -20,6 +20,8 @@
   become: true
   vars:
     pihole_user: piholeserviceacc
+  vars_files:
+    - files/secrets.yml
 
   tasks:
     - name: Install dependencies and create system user
@@ -34,7 +36,7 @@
     - name: Create system user for podman
       ansible.builtin.user:
         name: "{{ pihole_user }}"
-        password: change-me!
+        password: "{{ pihole_user_pass }}"
         state: present
         system: true
 
@@ -75,6 +77,14 @@
         group: "{{ pihole_user }}"
         mode: '0750'
 
+    - name: Create configuration file from template
+      ansible.builtin.template:
+        src: files/pihole_container.j2
+        dest: /home/piholeserviceacc/.config/containers/systemd/pihole.container
+        mode: '0600'
+      become: true
+      become_user: "{{ pihole_user }}"
+
     - name: Copy over quadlets to remote host
       ansible.builtin.copy:
         src: "{{ item }}"
@@ -100,7 +110,6 @@
       become_user: "{{ pihole_user }}"
       become: true
       when: lineinfile.changed
-      changed_when: "changed == true"
 
     - name: Redirect host ports to container ports with Rich Rules
       ansible.posix.firewalld:
@@ -114,7 +123,6 @@
         - rich_rule: rule family=ipv4 forward-port port=443 protocol=tcp to-port=8443
         - rich_rule: rule family=ipv4 forward-port port=53 protocol=tcp to-port=10053
         - rich_rule: rule family=ipv4 forward-port port=53 protocol=udp to-port=10053
-      become: true
 
     # Quadlet [Install] section should persist these service units
     - name: Start podman via service units
