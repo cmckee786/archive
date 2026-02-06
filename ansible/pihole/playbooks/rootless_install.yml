@@ -1,5 +1,4 @@
----
-# v 1.1.0
+# v 1.1.1
 # Authored by Christian McKee - cmckee786@github.com
 # Implements podman pihole container with a rootless service account
 #
@@ -13,7 +12,7 @@
 # Architecture: arm64
 # SELinux: Disabled
 
-
+---
 - name: Setup system user, dependencies for rootless pihole, and deploy
   hosts: # Desired hosts
   gather_facts: false
@@ -60,6 +59,7 @@
         regexp: "^{{ pihole_user }}:"
         line: "{{ pihole_user }}:100000:65536"
         state: present
+      register: subuidline
 
     - name: Add subgid entry for the user
       ansible.builtin.lineinfile:
@@ -67,20 +67,20 @@
         regexp: "^{{ pihole_user }}:"
         line: "{{ pihole_user }}:100000:65536"
         state: present
-      register: lineinfile
+      register: subgidline
 
     - name: Create necessary rootless directories
       ansible.builtin.file:
-        path: /home/piholeserviceacc/.config/containers/systemd/
+        path: /home/{{ pihole_user }}/.config/containers/systemd/
         state: directory
         owner: "{{ pihole_user }}"
         group: "{{ pihole_user }}"
         mode: '0750'
 
-    - name: Create configuration file from template
+    - name: Create pihole quadlet file from template
       ansible.builtin.template:
         src: files/pihole_container.j2
-        dest: /home/piholeserviceacc/.config/containers/systemd/pihole.container
+        dest: /home/{{ pihole_user }}/.config/containers/systemd/pihole.container
         mode: '0600'
       become: true
       become_user: "{{ pihole_user }}"
@@ -88,7 +88,7 @@
     - name: Copy over quadlets to remote host
       ansible.builtin.copy:
         src: "{{ item }}"
-        dest: /home/piholeserviceacc/.config/containers/systemd/
+        dest: /home/{{ pihole_user }}/.config/containers/systemd/
         owner: "{{ pihole_user }}"
         group: "{{ pihole_user }}"
         mode: '0750'
@@ -109,7 +109,7 @@
       ansible.builtin.command: podman system migrate
       become_user: "{{ pihole_user }}"
       become: true
-      when: lineinfile.changed
+      when: subuidline.changed or subgidline.changed == true
 
     - name: Redirect host ports to container ports with Rich Rules
       ansible.posix.firewalld:
