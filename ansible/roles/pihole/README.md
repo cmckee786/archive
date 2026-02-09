@@ -14,3 +14,8 @@ Kernel: Linux 6.1.31-v8.1.el9.altarch
 Instruction Set: ARMv8-A  
 Architecture: arm64  
 SELinux: Disabled  
+
+
+Example `ansible-playbook` command:
+
+`ansible-playbook -i roles/pihole/files/hosts.ini playbook.yml --fork 25 -K --ask-vault-pass`
