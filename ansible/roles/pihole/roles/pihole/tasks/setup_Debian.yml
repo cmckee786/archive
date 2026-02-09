@@ -1,0 +1,9 @@
+---
+
+- name: Debian - install packages
+  ansible.builtin.apt:
+    name:
+      - podman
+      - firewalld
+    state: present
+    update_cache: true

@@ -1,0 +1,9 @@
+---
+
+- name: RHEL - install packages
+  ansible.builtin.zypper:
+    name:
+      - podman
+      - firewalld
+    state: present
+    update_cache: true

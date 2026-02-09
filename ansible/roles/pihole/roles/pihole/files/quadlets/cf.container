@@ -1,0 +1,15 @@
+[Unit]
+Description=rootless adguard DoH cloudflare upstream container
+
+[Container]
+Image=docker.io/adguard/dnsproxy:latest
+ContainerName=adguard-cf
+Pod=pihole_rootless.pod
+AutoUpdate=registry
+
+Exec=--listen=0.0.0.0 --port=5353 --upstream=https://1.1.1.1/dns-query --upstream https://1.0.0.1/dns-query
+
+Pull=never
+
+[Install]
+WantedBy=multi-user.target default.target

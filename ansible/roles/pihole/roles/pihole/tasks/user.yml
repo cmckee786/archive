@@ -1,0 +1,80 @@
+---
+
+- name: Create system user for podman
+  ansible.builtin.user:
+    name: "{{ pihole_user | default(piholeserviceacc) }}"
+    password: "{{ pihole_user_pass }}"
+    state: present
+    system: true
+
+- name: Enable linger for pihole service account
+  ansible.builtin.command: "loginctl enable-linger {{ pihole_user | default(piholeserviceacc) }}"
+  args:
+    creates: "/var/lib/systemd/linger/{{ pihole_user | default(piholeserviceacc) }}"
+
+- name: Ensure /etc/subuid and /etc/subgid files exist
+  ansible.builtin.file:
+    path: "/etc/{{ item }}"
+    state: touch
+    mode: '0644'
+  loop:
+    - subuid
+    - subgid
+
+- name: Add subuid entry for the user
+  ansible.builtin.lineinfile:
+    path: /etc/subuid
+    regexp: "^{{ pihole_user | default(piholeserviceacc) }}:"
+    line: "{{ pihole_user | default(piholeserviceacc) }}:100000:65536"
+    state: present
+  register: subuidline
+
+- name: Add subgid entry for the user
+  ansible.builtin.lineinfile:
+    path: /etc/subgid
+    regexp: "^{{ pihole_user | default(piholeserviceacc) }}:"
+    line: "{{ pihole_user | default(piholeserviceacc) }}:100000:65536"
+    state: present
+  register: subgidline
+
+- name: Create necessary rootless directories
+  ansible.builtin.file:
+    path: /home/{{ pihole_user | default(piholeserviceacc) }}/.config/containers/systemd/
+    state: directory
+    owner: "{{ pihole_user | default(piholeserviceacc) }}"
+    group: "{{ pihole_user | default(piholeserviceacc) }}"
+    mode: '0750'
+
+- name: Create pihole quadlet file from template
+  ansible.builtin.template:
+    src: templates/pihole_container.j2
+    dest: /home/{{ pihole_user | default(piholeserviceacc) }}/.config/containers/systemd/pihole.container
+    mode: '0600'
+  become: true
+  become_user: "{{ pihole_user | default(piholeserviceacc) }}"
+
+- name: Copy over quadlets to remote host
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: /home/{{ pihole_user | default(piholeserviceacc) }}/.config/containers/systemd/
+    owner: "{{ pihole_user | default(piholeserviceacc) }}"
+    group: "{{ pihole_user | default(piholeserviceacc) }}"
+    mode: '0750'
+  with_fileglob:
+    - files/quadlets/*
+
+- name: Pull images to service account
+  containers.podman.podman_image:
+    name: "{{ item.image }}"
+    state: present
+  loop:
+    - image: docker.io/pihole/pihole:latest
+    - image: docker.io/adguard/dnsproxy:latest
+  become_user: "{{ pihole_user | default(piholeserviceacc) }}"
+  become: true
+
+- name: Implement sub(g)uid changes if necessary
+  ansible.builtin.command: podman system migrate
+  become_user: "{{ pihole_user | default(piholeserviceacc) }}"
+  become: true
+  when: subuidline.changed or subgidline.changed

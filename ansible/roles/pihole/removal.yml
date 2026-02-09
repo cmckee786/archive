@@ -11,22 +11,16 @@
 # Architecture: arm64
 # SELinux: Disabled
 
-
-- name: Remove system user, cleanup hanging assets
-  hosts: # Desired hosts
-  gather_facts: false
+- hosts: all
   become: true
-  vars:
-    pihole_user: piholeserviceacc
 
   tasks:
     - name: Stop podman pod and forcibly remove
       ansible.builtin.command: "podman pod rm --force pihole_rootless"
       register: removed
       changed_when: removed.rc == 0
-      failed_when: removed.rc != 0 and "error" in removed.stdout
       become: true
-      become_user: "{{ pihole_user }}"
+      become_user: "{{ pihole_user | default(piholeserviceacc) }}"
 
     - name: Stop podman pod and forcibly remove
       ansible.builtin.command: "podman volume rm piholedata"
@@ -34,16 +28,16 @@
       changed_when: volume.rc == 0
       failed_when: volume.rc != 0 and "error" in volume.stdout
       become: true
-      become_user: "{{ pihole_user }}"
+      become_user: "{{ pihole_user | default(piholeserviceacc) }}"
 
     - name: Disable linger for pihole service account
-      ansible.builtin.command: "loginctl disable-linger {{ pihole_user }}"
+      ansible.builtin.command: "loginctl disable-linger {{ pihole_user | default(piholeserviceacc) }}"
       args:
-        removes: /var/lib/systemd/linger/piholeserviceacc
+        removes: /var/lib/systemd/linger/{{ pihole_user | default(piholeserviceacc) }}
 
     - name: Delete system user
       ansible.builtin.user:
-        name: "{{ pihole_user }}"
+        name: "{{ pihole_user | default(piholeserviceacc) }}"
         state: absent
         system: true
       until: true
@@ -51,7 +45,7 @@
 
     - name: Remove necessary user home directories
       ansible.builtin.file:
-        path: /home/piholeserviceacc/
+        path: /home/{{ pihole_user | default(piholeserviceacc) }}/
         state: absent
 
     - name: Remove redirect rich rules

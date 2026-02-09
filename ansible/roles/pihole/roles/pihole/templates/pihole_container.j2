@@ -10,7 +10,7 @@ AutoUpdate=registry
 Pull=never
 Timezone=local
 Environment="FTLCONF_webserver_api_password={{ pihole_secret }}"
-Environment="FTLCONF_dns_upstreams=cloudflared-cf#5353;cloudflared-goog#5353"
+Environment="FTLCONF_dns_upstreams=adguard-cf#5353;adguard-goog#5353"
 
 Volume=piholedata:/etc/pihole/:z
 

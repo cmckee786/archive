@@ -1,0 +1,13 @@
+---
+- name: Redirect host ports to container ports with Rich Rules
+  ansible.posix.firewalld:
+    rich_rule: "{{ item.rich_rule }}"
+    zone: public
+    permanent: true
+    immediate: true
+    state: enabled
+  loop:
+    - rich_rule: rule family=ipv4 forward-port port=80 protocol=tcp to-port=8080
+    - rich_rule: rule family=ipv4 forward-port port=443 protocol=tcp to-port=8443
+    - rich_rule: rule family=ipv4 forward-port port=53 protocol=tcp to-port=10053
+    - rich_rule: rule family=ipv4 forward-port port=53 protocol=udp to-port=10053

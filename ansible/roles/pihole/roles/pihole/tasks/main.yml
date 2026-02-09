@@ -1,0 +1,32 @@
+---
+# v 1.2.0
+# Authored by Christian McKee - cmckee786@github.com
+# Implements podman pihole container with a rootless service account
+#
+# Requires Podman >=4.4, firewalld
+#
+# Tested on:
+# Operating System: Rocky Linux 9.7 (Blue Onyx)
+# CPE OS Name: cpe:/o:rocky:rocky:9::baseos
+# Kernel: Linux 6.1.31-v8.1.el9.altarch
+# Instruction Set: ARMv8-A
+# Architecture: arm64
+# SELinux: Disabled
+
+- name: Secrets variables
+  ansible.builtin.include_vars: secrets.yml
+
+- name: Include OS-specific setup user, and firewall tasks
+  ansible.builtin.include_tasks:
+    - setup_{{ ansible_os_family }}.yml
+    - user.yml
+    - firewall.yml
+
+- name: Start podman via service units
+  ansible.builtin.systemd:
+    name: pihole_rootless-pod
+    state: started
+    daemon_reload: true
+    scope: user
+  become_user: "{{ pihole_user | default(piholeserviceacc) }}"
+  become: true
