@@ -1,5 +1,5 @@
 [Unit]
-Description=rootless adguard DoH container
+Description=rootless adguard DoH google upstream container
 
 [Container]
 Image=docker.io/adguard/dnsproxy:latest
