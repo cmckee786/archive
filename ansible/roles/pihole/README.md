@@ -2,7 +2,9 @@
 
 v 1.2.0  
 Authored by Christian McKee - cmckee786@github.com  
-Implements podman pihole container with a rootless service account  
+
+Implements a rootless Podman Pihole container and upstream Adguard DNS proxy containers with a rootless service account to achieve DNS over HTTPS (DoH).
+Allows for Pihole service account to run podman auto-update from shell to easily update container images via registry labels.
 
 Requires Podman >=4.4, firewalld  
 
