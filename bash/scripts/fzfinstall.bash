@@ -4,9 +4,7 @@
 
 fzf_args=(
   --multi
-  # {1} is important here so that package manager does not get info for each package
-  # Only searches info of the currently selected package
-  --preview 'zypper info {1}' # apt show, dnf info
+  --preview '[[ -n "{1}" ]] && zypper info {1}' # apt show, dnf info
   --preview-label='alt-p: toggle description, alt-j/k: scroll, tab: multi-select'
   --preview-label-pos='bottom'
   --preview-window 'down:65%:wrap'
@@ -18,10 +16,11 @@ fzf_args=(
 
 # dnf repoquery --all --available --qf "%{name}" | sort -u | fzf
 # apt-cache pkgnames | fzf
-
-pkg_names=$(zypper --quiet search -t package "" | awk -F'|' 'NR>2 {print $2}' | tr -d ' ' | fzf "${fzf_args[@]}")
 # pkg_names=$(pacman -Slq | fzf "${fzf_args[@]}")
-#
+
+pkg_names=$(zypper --quiet search -t package "" | awk -F'|' '/^i/ || /^ / {print $2}' | tr -d ' ' | fzf "${fzf_args[@]}")
+
+
 if [[ -n "$pkg_names" ]]; then
   # Convert newline-separated selections to space-separated
   echo "$pkg_names" | tr '\n' ' ' | xargs sudo zypper in
