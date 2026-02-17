@@ -28,5 +28,5 @@
     state: started
     daemon_reload: true
     scope: user
-  become_user: "{{ pihole_user | default(piholeserviceacc) }}"
+  become_user: "{{ pihole_user }}"
   become: true

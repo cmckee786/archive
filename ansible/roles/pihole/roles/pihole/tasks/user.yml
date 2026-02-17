@@ -2,15 +2,15 @@
 
 - name: Create system user for podman
   ansible.builtin.user:
-    name: "{{ pihole_user | default(piholeserviceacc) }}"
+    name: "{{ pihole_user }}"
     password: "{{ pihole_user_pass }}"
     state: present
     system: true
 
 - name: Enable linger for pihole service account
-  ansible.builtin.command: "loginctl enable-linger {{ pihole_user | default(piholeserviceacc) }}"
+  ansible.builtin.command: "loginctl enable-linger {{ pihole_user }}"
   args:
-    creates: "/var/lib/systemd/linger/{{ pihole_user | default(piholeserviceacc) }}"
+    creates: "/var/lib/systemd/linger/{{ pihole_user }}"
 
 - name: Ensure /etc/subuid and /etc/subgid files exist
   ansible.builtin.file:
@@ -24,41 +24,41 @@
 - name: Add subuid entry for the user
   ansible.builtin.lineinfile:
     path: /etc/subuid
-    regexp: "^{{ pihole_user | default(piholeserviceacc) }}:"
-    line: "{{ pihole_user | default(piholeserviceacc) }}:100000:65536"
+    regexp: "^{{ pihole_user }}:"
+    line: "{{ pihole_user }}:100000:65536"
     state: present
   register: subuidline
 
 - name: Add subgid entry for the user
   ansible.builtin.lineinfile:
     path: /etc/subgid
-    regexp: "^{{ pihole_user | default(piholeserviceacc) }}:"
-    line: "{{ pihole_user | default(piholeserviceacc) }}:100000:65536"
+    regexp: "^{{ pihole_user }}:"
+    line: "{{ pihole_user }}:100000:65536"
     state: present
   register: subgidline
 
 - name: Create necessary rootless directories
   ansible.builtin.file:
-    path: /home/{{ pihole_user | default(piholeserviceacc) }}/.config/containers/systemd/
+    path: /home/{{ pihole_user }}/.config/containers/systemd/
     state: directory
-    owner: "{{ pihole_user | default(piholeserviceacc) }}"
-    group: "{{ pihole_user | default(piholeserviceacc) }}"
+    owner: "{{ pihole_user }}"
+    group: "{{ pihole_user }}"
     mode: '0750'
 
 - name: Create pihole quadlet file from template
   ansible.builtin.template:
     src: templates/pihole_container.j2
-    dest: /home/{{ pihole_user | default(piholeserviceacc) }}/.config/containers/systemd/pihole.container
+    dest: /home/{{ pihole_user }}/.config/containers/systemd/pihole.container
     mode: '0600'
   become: true
-  become_user: "{{ pihole_user | default(piholeserviceacc) }}"
+  become_user: "{{ pihole_user }}"
 
 - name: Copy over quadlets to remote host
   ansible.builtin.copy:
     src: "{{ item }}"
-    dest: /home/{{ pihole_user | default(piholeserviceacc) }}/.config/containers/systemd/
-    owner: "{{ pihole_user | default(piholeserviceacc) }}"
-    group: "{{ pihole_user | default(piholeserviceacc) }}"
+    dest: /home/{{ pihole_user }}/.config/containers/systemd/
+    owner: "{{ pihole_user }}"
+    group: "{{ pihole_user }}"
     mode: '0750'
   with_fileglob:
     - files/quadlets/*
@@ -70,11 +70,11 @@
   loop:
     - image: docker.io/pihole/pihole:latest
     - image: docker.io/adguard/dnsproxy:latest
-  become_user: "{{ pihole_user | default(piholeserviceacc) }}"
+  become_user: "{{ pihole_user }}"
   become: true
 
 - name: Implement sub(g)uid changes if necessary
   ansible.builtin.command: podman system migrate
-  become_user: "{{ pihole_user | default(piholeserviceacc) }}"
+  become_user: "{{ pihole_user }}"
   become: true
   when: subuidline.changed or subgidline.changed

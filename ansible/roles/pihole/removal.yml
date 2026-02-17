@@ -20,7 +20,7 @@
       register: removed
       changed_when: removed.rc == 0
       become: true
-      become_user: "{{ pihole_user | default(piholeserviceacc) }}"
+      become_user: "{{ pihole_user }}"
 
     - name: Stop podman pod and forcibly remove
       ansible.builtin.command: "podman volume rm piholedata"
@@ -28,16 +28,16 @@
       changed_when: volume.rc == 0
       failed_when: volume.rc != 0 and "error" in volume.stdout
       become: true
-      become_user: "{{ pihole_user | default(piholeserviceacc) }}"
+      become_user: "{{ pihole_user }}"
 
     - name: Disable linger for pihole service account
-      ansible.builtin.command: "loginctl disable-linger {{ pihole_user | default(piholeserviceacc) }}"
+      ansible.builtin.command: "loginctl disable-linger {{ pihole_user }}"
       args:
-        removes: /var/lib/systemd/linger/{{ pihole_user | default(piholeserviceacc) }}
+        removes: /var/lib/systemd/linger/{{ pihole_user }}
 
     - name: Delete system user
       ansible.builtin.user:
-        name: "{{ pihole_user | default(piholeserviceacc) }}"
+        name: "{{ pihole_user }}"
         state: absent
         system: true
       until: true
@@ -45,7 +45,7 @@
 
     - name: Remove necessary user home directories
       ansible.builtin.file:
-        path: /home/{{ pihole_user | default(piholeserviceacc) }}/
+        path: /home/{{ pihole_user }}/
         state: absent
 
     - name: Remove redirect rich rules
