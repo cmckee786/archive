@@ -16,7 +16,7 @@ fzf_args=(
 
 # dnf repoquery --all --available --qf "%{name}" | sort -u | fzf
 # apt-cache pkgnames | fzf
-# pkg_names=$(pacman -Slq | fzf "${fzf_args[@]}")
+# pacman -Slq | fzf
 
 pkg_names=$(zypper --quiet search -t package "" | awk -F'|' '/^i/ || /^ / {print $2}' | tr -d ' ' | fzf "${fzf_args[@]}")
 
