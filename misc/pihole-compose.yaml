@@ -1,0 +1,47 @@
+services:
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    hostname: docker-pihole-dns
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "80:80/tcp"
+      - "443:443/tcp"
+    environment:
+      TZ: "America/New_york"
+      FTLCONF_dns_listeningMode: "all" # Required if using bridge net driver
+      FTLCONF_webserver_api_password: "" #User-defined password
+      FTLCONF_dns_upstreams: "172.20.1.1#5353;172.20.8.8#5353"
+    volumes:
+      - "./data/etc:/etc/pihole/"
+      - "./data/dnsmasq.d/:/etc/dnsmasq.d/"
+    restart: unless-stopped
+    networks:
+      - pihole
+
+  cloudflared-cf:
+    container_name: adguard-cf
+    image: adguard/dnsproxy:latest
+    command: --listen=0.0.0.0 --port=5353 --upstream=https://1.1.1.1/dns-query \
+      --upstream https://1.0.0.1/dns-query
+    restart: unless-stopped
+    networks:
+      pihole:
+        ipv4_address: 172.20.1.1
+
+  cloudflared-goog:
+    container_name: adguard-goog
+    image: adguard/dnsproxy:latest
+    command: --listen=0.0.0.0 --port=5353 --upstream=https://8.8.8.8/dns-query \
+      --upstream https://8.8.4.4/dns-query
+    restart: unless-stopped
+    networks:
+      pihole:
+        ipv4_address: 172.20.8.8
+
+  networks:
+    pihole:
+      ipam:
+        config:
+          - subnet: 172.20.0.0/16
