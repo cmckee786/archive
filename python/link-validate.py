@@ -1,4 +1,4 @@
-# v 1.8.8
+# v 1.9.1
 # Authored by Christian McKee - cmckee786@github.com
 # Attempts to validate links within ProLUG Course-Books repo
 
@@ -27,14 +27,16 @@ RESET: str = "\033[0m"
 
 # If max_workers is None or not given, it will default
 # to the number of processors on the machine, multiplied by 5
-WORKER_COUNT = None
+WORKER_COUNT = 10
 
 # Regex intended to match http(s) links unique to this project
 REGEX: str = r"(?<!\[)https?://(?![^\s]*localhost)\S+\b/?"
 PATTERN: re.Pattern = re.compile(REGEX)
 
 CWD: Path = Path.cwd()
-FAILED_REPORT_PATH: Path = Path(f"{CWD}/failed_links.{datetime.now().strftime('%Y-%m-%d')}")
+FAILED_REPORT_PATH: Path = Path(
+    f"{CWD}/failed_links.{datetime.now().strftime('%Y-%m-%d')}"
+)
 STORAGE_PATH: Path = Path(f"{CWD}/scripts/link-storage/successfullinks.txt")
 IGNORED_PATH: Path = Path(f"{CWD}/scripts/link-storage/ignoredlinks.txt")
 
@@ -77,11 +79,18 @@ def cli_args() -> argparse.ArgumentParser:
         dest="build_ignore",
     )
     args_parser.add_argument(
-        "-a",
+        "-f",
         "--add-failed",
         action="store_true",
         help="add failed links to ignorelinks.txt file",
         dest="add_failed",
+    )
+    args_parser.add_argument(
+        "-a",
+        "--add-failed-successful",
+        action="store_true",
+        help="add failed links to successfullinks.txt file",
+        dest="add_successful",
     )
     args_parser.add_argument(
         "-n",
@@ -152,9 +161,7 @@ def validate_link(matched_item: dict[str, str | int | Path]) -> tuple:
 def get_unique_links(
     stored: list[str | None], ignored: list[str | None], arg_path: Path
 ) -> list:
-    """Aggregate URLs for link validation into dictionary for processing
-    Returns per file total and total unique links found into list for reporting
-    """
+    """Aggregate unique URLs for link validation into dictionary for processing"""
 
     stored_links: list = stored
     ignored_links: list = ignored
@@ -183,23 +190,26 @@ def get_unique_links(
         try:
             with open(path, "r", encoding="utf-8") as f:
                 for i, line in enumerate(f, 1):
-                    str_match = PATTERN.search(line)
-                    if not str_match:
-                        continue
-                    match = str_match.group(0)
-                    # Some URLs have nested resource URIs with parenthesis
-                    # i.e: https://en.wikipedia.org/wiki/C_(programming_language)
-                    if "(" in match:
-                        parts = match.split("/")
-                        if len(parts) > 1 and "(" in parts[-1] and ")" not in parts[-1]:
-                            match = f"{match})"
-                    # It is simpler to remove potential \n characters after match based on regex
-                    elif "\\" in match:
-                        match = match.split("\\")[0]
-                    if match:
-                        link_item = {"link": match, "file": path, "line": i}
-                        matched_links.append(link_item)
-                        file_matches += 1
+                    regex_match = PATTERN.search(line)
+                    if regex_match:
+                        match = regex_match.group(0)
+                        # Some URLs have nested resource URIs with parenthesis
+                        # i.e: https://en.wikipedia.org/wiki/C_(programming_language)
+                        if "(" in match:
+                            parts = match.split("/")
+                            if (
+                                len(parts) > 1
+                                and "(" in parts[-1]
+                                and ")" not in parts[-1]
+                            ):
+                                match = f"{match})"
+                        # Addresses some edge cases of newline characters
+                        elif "\\" in match:
+                            match = match.split("\\")[0]
+                        if match:
+                            link_item = {"link": match, "file": path, "line": i}
+                            matched_links.append(link_item)
+                            file_matches += 1
                 total_links += file_matches
                 file_matches = 0
         # Skip non-text files
@@ -210,9 +220,9 @@ def get_unique_links(
     unique_links = list({i["link"]: i for i in reversed(matched_links)}.values())
 
     print(
-        f"Total links found: {ORANGE}{total_links}{RESET}\n"
-        f"Unique links: {GREEN}{len(unique_links)}{RESET}\n"
-        f"Filtering stored and ignored links..."
+        f"Total links found: {ORANGE}{total_links}{RESET}",
+        f"Unique links: {GREEN}{len(unique_links)}{RESET}",
+        sep="\n",
     )
 
     # Filter out ignored and stored links if available
@@ -226,103 +236,104 @@ def get_unique_links(
 
 def main() -> None:
     """The place we call home"""
-    arg_path: Path
+    arg_path: Path = CWD
     successful_links: list = []
     failed_links: list = []
     storage_links: list = []
     ignored_storage_links: list = []
 
-    try:
-        parser = cli_args().parse_args()
+    parser = cli_args().parse_args()
 
-        if parser.build_ignore:
-            print("Ignored link storage has been reset...")
-            with open(IGNORED_PATH, "w", encoding="utf-8"):
-                pass
-        if parser.build_storage:
-            print("Successful link storage has been reset...")
-            with open(STORAGE_PATH, "w", encoding="utf-8"):
-                pass
-        if parser.skip_store is False:
-            storage_links = get_file_links(STORAGE_PATH)
-        if parser.skip_ignore is False:
-            ignored_storage_links = get_file_links(IGNORED_PATH)
-        if parser.directory and Path(parser.directory).exists():
-            arg_path = parser.directory
-        else:
-            print("Path may not exist\nExiting...")
-            sys.exit(1)
+    if parser.build_ignore:
+        print("Ignored link storage has been reset...")
+        with open(IGNORED_PATH, "w", encoding="utf-8"):
+            pass
+    if parser.build_storage:
+        print("Successful link storage has been reset...")
+        with open(STORAGE_PATH, "w", encoding="utf-8"):
+            pass
+    if parser.skip_store is False:
+        storage_links = get_file_links(STORAGE_PATH)
+    if parser.skip_ignore is False:
+        ignored_storage_links = get_file_links(IGNORED_PATH)
+    if parser.directory and Path(parser.directory).exists():
+        arg_path = parser.directory
+    else:
+        print("Path may not exist\nExiting...")
+        sys.exit(1)
 
-        test_links = get_unique_links(storage_links, ignored_storage_links, arg_path)
+    test_links = get_unique_links(storage_links, ignored_storage_links, arg_path)
 
-        if test_links and parser.skip_validation is False:
-            print("Attempting to resolve links for testing...")
-            with ThreadPoolExecutor(max_workers=WORKER_COUNT) as executor:
-                futures = {
-                    executor.submit(validate_link, dict_item): dict_item
-                    for dict_item in test_links
-                }
-                for i, future in enumerate(as_completed(futures), 1):
-                    try:
-                        validate_return, matched_item = future.result()
-                        if validate_return[0] == 1:
-                            failed_links.append((matched_item, validate_return))
-                        elif validate_return[0] == 0:
-                            successful_links.append(matched_item)
-                        print(
-                            f"\rTesting links: {ORANGE}{i}{RESET}|{len(test_links)} "
-                            f"{(int(i / len(test_links) * 100)):.0f}%",
-                            end="",
-                            flush=True,
-                        )
-                    except Exception as e:
-                        print(f"{futures[future]} - Unexpected error: {e}")
-        print()
+    if test_links and parser.skip_validation is False:
+        print("Attempting to resolve links for testing...")
+        with ThreadPoolExecutor(max_workers=WORKER_COUNT) as executor:
+            futures = {
+                executor.submit(validate_link, dict_item): dict_item
+                for dict_item in test_links
+            }
+            for i, future in enumerate(as_completed(futures), 1):
+                try:
+                    validate_return, matched_item = future.result()
+                    if validate_return[0] == 1:
+                        failed_links.append((matched_item, validate_return))
+                    elif validate_return[0] == 0:
+                        successful_links.append(matched_item)
+                    print(
+                        f"\rTesting links: {ORANGE}{i}{RESET}|{len(test_links)} "
+                        f"{(int(i / len(test_links) * 100)):.0f}%",
+                        end="",
+                        flush=True,
+                    )
+                except Exception as e:
+                    print(f"{futures[future]} - Unexpected error: {e}")
+            print()
 
-        if successful_links and parser.skip_store is False:
-            print(f"Appending successful links to {STORAGE_PATH}...")
-            with open(STORAGE_PATH, "a", encoding="utf-8") as f_updated:
-                [f_updated.writelines(f"{link['link']}\n") for link in successful_links]
-            sort_file(STORAGE_PATH)
+    if successful_links and parser.skip_store is False:
+        print(f"Appending successful links to {STORAGE_PATH}...")
+        with open(STORAGE_PATH, "a", encoding="utf-8") as f_updated:
+            [f_updated.writelines(f"{link['link']}\n") for link in successful_links]
+        sort_file(STORAGE_PATH)
 
-        if failed_links and parser.skip_validation is False:
-            print(f"Failed Links: {RED}{len(failed_links)}{RESET}")
-            print(f"{'-' * 20}")
+    if failed_links and parser.skip_validation is False:
+        print(f"Failed Links: {RED}{len(failed_links)}{RESET}")
+        print(f"{'-' * 20}")
+        [print(f"{item[0]['link']} {RED}{item[1][1]}{RESET}") for item in failed_links]
+        print(f"{'-' * 20}")
+        print(f"Writing report to {FAILED_REPORT_PATH}...")
+        with open(FAILED_REPORT_PATH, "w", encoding="utf-8") as f_report:
             [
-                print(f"{item[0]['link']} {RED}{item[1][1]}{RESET}")
+                f_report.writelines(
+                    f"{item[0]['link']}"
+                    f" {ORANGE}File:{item[0]['file']}{RESET}"
+                    f" {BLUE}L:{item[0]['line']}{RESET}"
+                    f" {RED}{item[1][1]}{RESET}\n"
+                )
                 for item in failed_links
             ]
-            print(f"{'-' * 20}")
-            print(f"Writing report to {FAILED_REPORT_PATH}...")
-            with open(FAILED_REPORT_PATH, "w", encoding="utf-8") as f_report:
-                [
-                    f_report.writelines(
-                        f"{item[0]['link']}"
-                        f" {ORANGE}File:{item[0]['file']}{RESET}"
-                        f" {BLUE}L:{item[0]['line']}{RESET}"
-                        f" {RED}{item[1][1]}{RESET}\n"
-                    )
-                    for item in failed_links
-                ]
 
-            if parser.build_ignore:
-                print(f"Building new {IGNORED_PATH} file...")
-                with open(IGNORED_PATH, "w", encoding="utf-8") as f_ignore:
-                    [f_ignore.writelines(f"{link['link']}\n") for link in failed_links]
-                sort_file(IGNORED_PATH)
+        if parser.build_ignore:
+            print(f"Building new {IGNORED_PATH} file...")
+            with open(IGNORED_PATH, "w", encoding="utf-8") as f_ignore:
+                [f_ignore.writelines(f"{link['link']}\n") for link in failed_links]
 
-            if parser.add_failed and parser.build_ignore is False:
-                print(f"Appending failed links to {IGNORED_PATH} file...")
-                with open(IGNORED_PATH, "a", encoding="utf-8") as f_ignore:
-                    [f_ignore.writelines(f"{link['link']}\n") for link in failed_links]
-                sort_file(IGNORED_PATH)
+        if parser.add_failed:
+            print(f"Appending failed links to {IGNORED_PATH} file...")
+            with open(IGNORED_PATH, "a", encoding="utf-8") as f_failed:
+                [f_failed.writelines(f"{link['link']}\n") for link in failed_links]
 
-        elif parser.skip_validation is True:
-            print("Skipped link validation!")
-        else:
-            print("No failed links!")
-    except Exception as e:
-        print(e)
+        if parser.add_successful:
+            print(f"Appending failed links to {STORAGE_PATH} file...")
+            with open(STORAGE_PATH, "a", encoding="utf-8") as f_successful:
+                [f_successful.writelines(f"{link['link']}\n") for link in failed_links]
+
+        # TODO: Allow sort file to take in Path or list of Paths, logic to run sort file once
+        sort_file(STORAGE_PATH)
+        sort_file(IGNORED_PATH)
+
+    elif parser.skip_validation is True:
+        print("Skipped link validation!")
+    else:
+        print("No operations executed!")
 
 
 if __name__ == "__main__":

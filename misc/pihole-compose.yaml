@@ -40,8 +40,8 @@ services:
       pihole:
         ipv4_address: 172.20.8.8
 
-  networks:
-    pihole:
-      ipam:
-        config:
-          - subnet: 172.20.0.0/16
+networks:
+  pihole:
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
