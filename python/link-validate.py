@@ -14,6 +14,7 @@ import argparse
 import re
 import sys
 import urllib.error
+import random
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
@@ -123,15 +124,17 @@ def get_file_links(path: Path) -> list[str | None]:
     return stored_links
 
 
-def sort_file(path: Path) -> None:
+def sort_file(*paths: Path) -> None:
     """Sort files for stored and ignored links to reduce diffs"""
-    with open(path, "r", encoding="utf-8") as f_pre:
-        links = [line.strip() for line in f_pre]
-        links.sort()
-        if links:
-            with open(path, "w", encoding="utf-8") as f_post:
-                for line in links:
-                    f_post.writelines(f"{line}\n")
+    for path in paths:
+        if path and Path(path).exists():
+            with open(path, "r", encoding="utf-8") as f_pre:
+                links = [line.strip() for line in f_pre]
+                if links:
+                    links.sort()
+                    with open(path, "w", encoding="utf-8") as f_post:
+                        for line in links:
+                            f_post.writelines(f"{line}\n")
 
 
 def validate_link(matched_item: dict[str, str | int | Path]) -> tuple:
@@ -160,7 +163,7 @@ def validate_link(matched_item: dict[str, str | int | Path]) -> tuple:
 
 def get_unique_links(
     stored: list[str | None], ignored: list[str | None], arg_path: Path
-) -> list:
+) -> list[dict]:
     """Aggregate unique URLs for link validation into dictionary for processing"""
 
     stored_links: list = stored
@@ -265,12 +268,16 @@ def main() -> None:
     test_links = get_unique_links(storage_links, ignored_storage_links, arg_path)
 
     if test_links and parser.skip_validation is False:
+        # Attempt to randomize list to prevent rate limiting of similar domains
+        random.shuffle(test_links)
         print("Attempting to resolve links for testing...")
+
         with ThreadPoolExecutor(max_workers=WORKER_COUNT) as executor:
             futures = {
                 executor.submit(validate_link, dict_item): dict_item
                 for dict_item in test_links
             }
+
             for i, future in enumerate(as_completed(futures), 1):
                 try:
                     validate_return, matched_item = future.result()
@@ -326,9 +333,7 @@ def main() -> None:
             with open(STORAGE_PATH, "a", encoding="utf-8") as f_successful:
                 [f_successful.writelines(f"{link['link']}\n") for link in failed_links]
 
-        # TODO: Allow sort file to take in Path or list of Paths, logic to run sort file once
-        sort_file(STORAGE_PATH)
-        sort_file(IGNORED_PATH)
+        sort_file(STORAGE_PATH, IGNORED_PATH)
 
     elif parser.skip_validation is True:
         print("Skipped link validation!")
