@@ -156,6 +156,21 @@ def validate_link(matched_item: dict[str, str | int | Path]) -> tuple:
     return link_status, matched_item
 
 
+def get_file_paths(arg_path):
+    """Generator to validate globbed directories and file Paths"""
+    base_path = Path(arg_path)
+    ignored = {Path(P).resolve() for P in [STORAGE_PATH, IGNORED_PATH, FAILED_REPORT_PATH]}
+    
+    if base_path.is_file():
+        yield base_path
+    elif base_path.is_dir():
+        for p in base_path.rglob("*"):
+            try:
+                if p.is_file() and p.resolve() not in ignored:
+                    yield p
+            except PermissionError:
+                continue
+
 def get_unique_links(
     stored: list[str | None], ignored: list[str | None], arg_path: Path
 ) -> list[dict]:
@@ -169,22 +184,7 @@ def get_unique_links(
     file_matches: int = 0
     total_links: int = 0
     link_item: dict[str, str | Path | int] = {"link": "", "file": "", "line": ""}
-
-    if Path(arg_path).is_dir():
-        for p in Path(arg_path).rglob("*"):
-            try:
-                if p.is_file() and p not in [
-                    Path(STORAGE_PATH),
-                    Path(IGNORED_PATH),
-                    Path(FAILED_REPORT_PATH),
-                ]:
-                    file_paths.append(p)
-                else:
-                    continue
-            except PermissionError:
-                continue
-    elif Path(arg_path).is_file():
-        file_paths.append(arg_path)
+    file_paths = list(get_file_paths(arg_path))
 
     for path in file_paths:
         try:
