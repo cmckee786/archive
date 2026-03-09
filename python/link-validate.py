@@ -1,4 +1,4 @@
-# v 1.9.1
+# v 1.9.2
 # Authored by Christian McKee - cmckee786@github.com
 # Attempts to validate links within ProLUG Course-Books repo
 
@@ -52,6 +52,12 @@ def cli_args() -> argparse.ArgumentParser:
         "'scripts/link-storage/successfullinks.txt' by default."
     )
     args_parser.add_argument(
+        "path",
+        nargs="?",
+        help="specific file or directory to aggregate and test links",
+        default=CWD,
+    )
+    args_parser.add_argument(
         "-s",
         "--skip-storage",
         action="store_true",
@@ -100,14 +106,6 @@ def cli_args() -> argparse.ArgumentParser:
         help="skip validation of URLs and print default reporting to stdout",
         dest="skip_validation",
     )
-    args_parser.add_argument(
-        "-d",
-        "--directory",
-        type=str,
-        default=CWD,
-        help="aggregate links from a specified directory",
-        dest="directory",
-    )
 
     return args_parser
 
@@ -125,16 +123,13 @@ def get_file_links(path: Path) -> list[str | None]:
 
 
 def sort_file(*paths: Path) -> None:
-    """Sort files for stored and ignored links to reduce diffs"""
+    """Sort files for stored and ignored links to reduce git diffs."""
     for path in paths:
-        if path and Path(path).exists():
-            with open(path, "r", encoding="utf-8") as f_pre:
-                links = [line.strip() for line in f_pre]
-                if links:
-                    links.sort()
-                    with open(path, "w", encoding="utf-8") as f_post:
-                        for line in links:
-                            f_post.writelines(f"{line}\n")
+        if path.is_file():
+            lines = list(set(path.read_text(encoding="utf-8").splitlines()))
+            if lines:
+                sorted_content = "\n".join(sorted(lines)) + "\n"
+                path.write_text(sorted_content, encoding="utf-8")
 
 
 def validate_link(matched_item: dict[str, str | int | Path]) -> tuple:
@@ -175,19 +170,21 @@ def get_unique_links(
     total_links: int = 0
     link_item: dict[str, str | Path | int] = {"link": "", "file": "", "line": ""}
 
-    # Traverse implied current or specified directory from argument
-    for p in Path(arg_path).rglob("*"):
-        try:
-            if p.is_file() and p not in [
-                Path(STORAGE_PATH),
-                Path(IGNORED_PATH),
-                Path(FAILED_REPORT_PATH),
-            ]:
-                file_paths.append(p)
-            else:
+    if Path(arg_path).is_dir():
+        for p in Path(arg_path).rglob("*"):
+            try:
+                if p.is_file() and p not in [
+                    Path(STORAGE_PATH),
+                    Path(IGNORED_PATH),
+                    Path(FAILED_REPORT_PATH),
+                ]:
+                    file_paths.append(p)
+                else:
+                    continue
+            except PermissionError:
                 continue
-        except PermissionError:
-            continue
+    elif Path(arg_path).is_file():
+        file_paths.append(arg_path)
 
     for path in file_paths:
         try:
@@ -239,7 +236,6 @@ def get_unique_links(
 
 def main() -> None:
     """The place we call home"""
-    arg_path: Path = CWD
     successful_links: list = []
     failed_links: list = []
     storage_links: list = []
@@ -247,6 +243,11 @@ def main() -> None:
 
     parser = cli_args().parse_args()
 
+    if parser.path and Path(parser.path).exists():
+        pass
+    else:
+        print("Path may not exist\nExiting...")
+        sys.exit(1)
     if parser.build_ignore:
         print("Ignored link storage has been reset...")
         with open(IGNORED_PATH, "w", encoding="utf-8"):
@@ -259,16 +260,11 @@ def main() -> None:
         storage_links = get_file_links(STORAGE_PATH)
     if parser.skip_ignore is False:
         ignored_storage_links = get_file_links(IGNORED_PATH)
-    if parser.directory and Path(parser.directory).exists():
-        arg_path = parser.directory
-    else:
-        print("Path may not exist\nExiting...")
-        sys.exit(1)
 
-    test_links = get_unique_links(storage_links, ignored_storage_links, arg_path)
+    test_links = get_unique_links(storage_links, ignored_storage_links, parser.path)
 
     if test_links and parser.skip_validation is False:
-        # Attempt to randomize list to prevent rate limiting of similar domains
+        # Randomize list to prevent rate limiting of similar domains
         random.shuffle(test_links)
         print("Attempting to resolve links for testing...")
 
@@ -335,10 +331,10 @@ def main() -> None:
 
         sort_file(STORAGE_PATH, IGNORED_PATH)
 
-    elif parser.skip_validation is True:
+    elif parser.skip_validation:
         print("Skipped link validation!")
     else:
-        print("No operations executed!")
+        print("No failed links!")
 
 
 if __name__ == "__main__":
