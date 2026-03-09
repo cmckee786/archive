@@ -159,8 +159,10 @@ def validate_link(matched_item: dict[str, str | int | Path]) -> tuple:
 def get_file_paths(arg_path):
     """Generator to validate globbed directories and file Paths"""
     base_path = Path(arg_path)
-    ignored = {Path(P).resolve() for P in [STORAGE_PATH, IGNORED_PATH, FAILED_REPORT_PATH]}
-    
+    ignored = {
+        Path(P).resolve() for P in [STORAGE_PATH, IGNORED_PATH, FAILED_REPORT_PATH]
+    }
+
     if base_path.is_file():
         yield base_path
     elif base_path.is_dir():
@@ -170,6 +172,7 @@ def get_file_paths(arg_path):
                     yield p
             except PermissionError:
                 continue
+
 
 def get_unique_links(
     stored: list[str | None], ignored: list[str | None], arg_path: Path
@@ -291,43 +294,41 @@ def main() -> None:
                     print(f"{futures[future]} - Unexpected error: {e}")
             print()
 
-    if successful_links and parser.skip_store is False:
+    if successful_links and not parser.skip_store:
         print(f"Appending successful links to {STORAGE_PATH}...")
         with open(STORAGE_PATH, "a", encoding="utf-8") as f_updated:
-            [f_updated.writelines(f"{link['link']}\n") for link in successful_links]
+            f_updated.writelines(f"{link['link']}\n" for link in successful_links)
         sort_file(STORAGE_PATH)
 
-    if failed_links and parser.skip_validation is False:
+    if failed_links and not parser.skip_validation:
         print(f"Failed Links: {RED}{len(failed_links)}{RESET}")
         print(f"{'-' * 20}")
-        [print(f"{item[0]['link']} {RED}{item[1][1]}{RESET}") for item in failed_links]
+        print(f"{item[0]['link']} {RED}{item[1][1]}{RESET}" for item in failed_links)
         print(f"{'-' * 20}")
         print(f"Writing report to {FAILED_REPORT_PATH}...")
         with open(FAILED_REPORT_PATH, "w", encoding="utf-8") as f_report:
-            [
-                f_report.writelines(
-                    f"{item[0]['link']}"
-                    f" {ORANGE}File:{item[0]['file']}{RESET}"
-                    f" {BLUE}L:{item[0]['line']}{RESET}"
-                    f" {RED}{item[1][1]}{RESET}\n"
-                )
+            f_report.writelines(
+                f"{item[0]['link']}"
+                f" {ORANGE}File:{item[0]['file']}{RESET}"
+                f" {BLUE}L:{item[0]['line']}{RESET}"
+                f" {RED}{item[1][1]}{RESET}\n"
                 for item in failed_links
-            ]
+            )
 
         if parser.build_ignore:
             print(f"Building new {IGNORED_PATH} file...")
             with open(IGNORED_PATH, "w", encoding="utf-8") as f_ignore:
-                [f_ignore.writelines(f"{link['link']}\n") for link in failed_links]
+                f_ignore.writelines(f"{link['link']}\n" for link in failed_links)
 
         if parser.add_failed:
             print(f"Appending failed links to {IGNORED_PATH} file...")
             with open(IGNORED_PATH, "a", encoding="utf-8") as f_failed:
-                [f_failed.writelines(f"{link['link']}\n") for link in failed_links]
+                f_failed.writelines(f"{link['link']}\n" for link in failed_links)
 
         if parser.add_successful:
             print(f"Appending failed links to {STORAGE_PATH} file...")
             with open(STORAGE_PATH, "a", encoding="utf-8") as f_successful:
-                [f_successful.writelines(f"{link['link']}\n") for link in failed_links]
+                f_successful.writelines(f"{link['link']}\n" for link in failed_links)
 
         sort_file(STORAGE_PATH, IGNORED_PATH)
 
