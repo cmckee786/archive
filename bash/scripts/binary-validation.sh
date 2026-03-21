@@ -13,12 +13,17 @@
 
 set -eo pipefail
 
-declare MDBOOK_VERSION
-declare SKIP_DIGEST=0
-declare INTERACTIVE=0
 declare EXTRACT=0
+declare VERSIONED_FETCH
+declare MDBOOK_VERSION
+declare INTERACTIVE=0
+declare SKIP_DIGEST=0
 
-declare JSON
+JSON="$(curl -sL \
+    -H "Accept: application/vnd.github+json" \
+    -H "X-GitHub-Api-Version: 2026-03-10" \
+    https://api.github.com/repos/rust-lang/mdBook/releases)"
+
 REG_PATTERN='^v?([0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}$)'
 
 usage() {
@@ -33,9 +38,8 @@ usage() {
 
     The binary expects an mdBook version to be passed as a parameter, for example: './binary-validation.sh 0.4.52'
 
-
     USAGE
-        ./binary-validation.sh \$version [options] [-s][-i][-h]
+                ./binary-validation.sh \$version [options] [-s][-i][-l][-h]
 
     OPTIONS
         -s      Skips GitHub API sha256 digest check logic, usually used with a non-interactive call of
@@ -46,20 +50,35 @@ usage() {
                 prompt the user whether to continue the download if it does not detect the sha digest. Practical
                 for local dev purposes.
 
+        -l      List all available versions of mdBook.
+
         -h      Display this help message.
-        "
+    "
 }
 
-while getopts "sih" option; do
+list-versions() {
+
+    local jquery=".[].tag_name"
+    if [[ -n "$JSON" ]]; then
+        printf "Available versions:\n"
+        jq "$jquery" <<<"$JSON"
+    fi
+}
+
+while getopts "sihl" option; do
     case "$option" in
     s) SKIP_DIGEST=1 ;;
     i) INTERACTIVE=1 ;;
     h)
         usage
-        exit
+        exit 0
+        ;;
+    l)
+        list-versions
+        exit 0
         ;;
     \?)
-        printf >&2 "Unknown argument!\n./binary-validation.sh \$version [options] [-s][-i][-h]"
+        printf >&2 "Unknown argument!\n./binary-validation.sh \$version [options] [-s][-i][-l][-h]"
         exit 1
         ;;
     esac
@@ -117,15 +136,10 @@ json_setup() {
     printf "mdBook Binary script executing...\n"
     printf "Querying GH API for JSON %s mdBook record...\n" "$MDBOOK_VERSION"
 
-    JSON="$(curl -sL \
-        -H "Accept: application/vnd.github+json" \
-        -H "X-GitHub-Api-Version: 2026-03-10" \
-        https://api.github.com/repos/rust-lang/mdBook/releases |
-        jq "$jquery")" ||
-        {
-            printf "Something went wrong with the GH API request. Consider set -x for debugging.\n" 1>&2
-            return 1
-        }
+    VERSIONED_FETCH="$(jq -r "$jquery" <<<"$JSON")" || {
+        printf "Something went wrong with the GH API request. Consider set -x for debugging.\n" 1>&2
+        return 1
+    }
 
     # TODO Implement GH TOKEN in the future?
     # gh api repos/rust-lang/mdBook/releases?per_page=5 --jq "${jquery}" > "${json}"||
@@ -137,9 +151,9 @@ json_setup() {
 
 binary_fetch() {
 
-    if [[ -n "$JSON" ]]; then
+    if [[ -n "$VERSIONED_FETCH" ]]; then
         printf "Parsing API JSON return data and fetching binary...\n\n"
-        curl -LO --progress-bar "$(jq -r '.[].browser_download_url' <<<"$JSON")" || {
+        curl -LO --progress-bar "$(jq -r '.[].browser_download_url' <<<"$VERSIONED_FETCH")" || {
             printf >&2 "Failed to download mkBook binary!\n" && return 1
         }
         printf "\n"
@@ -154,8 +168,8 @@ validation-decision() {
     local zip_digest
     local zip
 
-    api_digest="$(jq -r '.[].digest' <<<"$JSON" | cut -d: -f2)"
-    zip="$(jq -r '.[].name' <<<"$JSON")"
+    api_digest="$(jq -r '.[].digest' <<<"$VERSIONED_FETCH" | cut -d: -f2)"
+    zip="$(jq -r '.[].name' <<<"$VERSIONED_FETCH")"
     zip_digest="$(sha256sum "$zip" | cut -d ' ' -f1)"
 
     printf "%2s %s\n" "ZIP:" "$zip" "API_DIGEST:" "$api_digest"
