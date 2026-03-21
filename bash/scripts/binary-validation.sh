@@ -34,9 +34,10 @@ usage() {
 
     JSON GitHub records will be pulled down and parsed with jq, the targeted mdBook version zip file
     will be pulled down if found and validated against the GitHub sha digest value and the local sha256sum
-    digest value, and finally extracted for use. 
+    digest value, and finally extracted for use.
 
     The binary expects an mdBook version to be passed as a parameter, for example: './binary-validation.sh 0.4.52'
+    However -h and -l can be passed without an mdBook version.
 
     USAGE
                 ./binary-validation.sh \$version [options] [-s][-i][-l][-h]
@@ -65,7 +66,7 @@ list-versions() {
     fi
 }
 
-while getopts "sihl" option; do
+while getopts "silh" option; do
     case "$option" in
     s) SKIP_DIGEST=1 ;;
     i) INTERACTIVE=1 ;;
@@ -93,16 +94,15 @@ shift $((OPTIND - 1))
 if [[ -n "$1" && "$1" =~ $REG_PATTERN ]]; then
     MDBOOK_VERSION="$1"
 elif [[ ! "$1" =~ $REG_PATTERN ]]; then
-    printf >&2 "Unrecognized mdBook version pattern, script accepts semantic version for example: 0.4.52"
+    printf >&2 "Unrecognized mdBook version pattern, script accepts semantic version, for example: 0.4.52"
     exit 1
 fi
 
-# If the mdbook version is pre-digest version (<0.4.52), ask for user validation
 interactive-download() {
     if [[ $INTERACTIVE -gt 0 ]]; then
         local -l choice
         until [[ $choice =~ ^[Yy|nN]$ ]]; do
-            read -r -p "Do you want to continue [y/N]? " choice
+            read -r -p "Do you want to continue the download? [y/N] " choice
             choice=${choice:-N}
             case $choice in
             y*)
@@ -113,7 +113,7 @@ interactive-download() {
                 printf "Cancelling download.\n"
                 ;;
             *)
-                printf "Invalid input! Please choose [y/N]. \n"
+                printf "Invalid input! Please choose. [y/N] \n"
                 ;;
             esac
         done
@@ -197,7 +197,7 @@ validation-decision() {
         printf "\nThe API digest appears to be different than the downloaded binary digest:"
         printf "\n%2s %s" "API sha:" "$api_digest" "ZIP sha:" "$zip_digest"
         printf "\n\nDumping JSON record and exiting...\n\n"
-        echo "$JSON" | jq '.'
+        jq '.' <<<"$VERSIONED_FETCH"
     fi
 
     if [[ $EXTRACT -eq 1 ]]; then
