@@ -156,7 +156,7 @@ validation-decision() {
 
     api_digest="$(jq -r '.[].digest' <<<"$JSON" | cut -d: -f2)"
     zip="$(jq -r '.[].name' <<<"$JSON")"
-    zip_digest="$(sha256sum "$zip" | awk '{print $1}')"
+    zip_digest="$(sha256sum "$zip" | cut -d ' ' -f1)"
 
     printf "%2s %s\n" "ZIP:" "$zip" "API_DIGEST:" "$api_digest"
     printf "ZIP_DIGEST: %s\n\n" "$zip_digest"
