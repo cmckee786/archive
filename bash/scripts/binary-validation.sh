@@ -18,8 +18,8 @@ declare SKIP_DIGEST=0
 declare INTERACTIVE=0
 declare EXTRACT=0
 
-declare json
-reg_pattern='^v?([0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}$)'
+declare JSON
+REG_PATTERN='^v?([0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}$)'
 
 usage() {
     printf "
@@ -71,9 +71,9 @@ if [ "$OPTIND" -gt "$#" ]; then
 fi
 
 shift $((OPTIND - 1))
-if [[ -n "$1" && "$1" =~ $reg_pattern ]]; then
+if [[ -n "$1" && "$1" =~ $REG_PATTERN ]]; then
     MDBOOK_VERSION="$1"
-elif [[ ! "$1" =~ $reg_pattern ]]; then
+elif [[ ! "$1" =~ $REG_PATTERN ]]; then
     printf >&2 "Unrecognized mdBook version pattern, script accepts semantic version for example: 0.4.52"
     exit 1
 fi
@@ -117,7 +117,7 @@ json_setup() {
     printf "mdBook Binary script executing...\n"
     printf "Querying GH API for JSON %s mdBook record...\n" "$MDBOOK_VERSION"
 
-    json="$(curl -sL \
+    JSON="$(curl -sL \
         -H "Accept: application/vnd.github+json" \
         -H "X-GitHub-Api-Version: 2022-11-28" \
         https://api.github.com/repos/rust-lang/mdBook/releases |
@@ -137,9 +137,9 @@ json_setup() {
 
 binary_fetch() {
 
-    if [[ -n "$json" ]]; then
+    if [[ -n "$JSON" ]]; then
         printf "Parsing API JSON return data and fetching binary...\n\n"
-        curl -LO --progress-bar "$(jq -r '.[].browser_download_url' <<<"$json")" || {
+        curl -LO --progress-bar "$(jq -r '.[].browser_download_url' <<<"$JSON")" || {
             printf >&2 "Failed to download mkBook binary!\n" && return 1
         }
         printf "\n"
@@ -154,8 +154,8 @@ validation-decision() {
     local zip_digest
     local zip
 
-    api_digest="$(jq -r '.[].digest' <<<"${json}" | cut -d: -f2)"
-    zip="$(jq -r '.[].name' <<<"$json")"
+    api_digest="$(jq -r '.[].digest' <<<"$JSON" | cut -d: -f2)"
+    zip="$(jq -r '.[].name' <<<"$JSON")"
     zip_digest="$(sha256sum "$zip" | awk '{print $1}')"
 
     printf "%2s %s\n" "ZIP:" "$zip" "API_DIGEST:" "$api_digest"
@@ -183,7 +183,7 @@ validation-decision() {
         printf "\nThe API digest appears to be different than the downloaded binary digest:"
         printf "\n%2s %s" "API sha:" "$api_digest" "ZIP sha:" "$zip_digest"
         printf "\n\nDumping JSON record and exiting...\n\n"
-        echo "$json" | jq '.'
+        echo "$JSON" | jq '.'
     fi
 
     if [[ $EXTRACT -eq 1 ]]; then
