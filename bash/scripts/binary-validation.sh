@@ -119,7 +119,7 @@ json_setup() {
 
     JSON="$(curl -sL \
         -H "Accept: application/vnd.github+json" \
-        -H "X-GitHub-Api-Version: 2022-11-28" \
+        -H "X-GitHub-Api-Version: 2026-03-10" \
         https://api.github.com/repos/rust-lang/mdBook/releases |
         jq "$jquery")" ||
         {
