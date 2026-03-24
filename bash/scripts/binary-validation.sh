@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# binary-validator.sh v1.1.4
+# binary-validator.sh v1.3.1
 #
 # Authored by:
 # github.com/cmckee786
@@ -51,9 +51,9 @@ usage() {
                 prompt the user whether to continue the download if it does not detect the sha digest. Practical
                 for local dev purposes.
 
-        -l      List all available versions of mdBook.
+        -l      List all available versions of mdBook and exit.
 
-        -h      Display this help message.
+        -h      Display this help message and exit.
     "
 }
 
