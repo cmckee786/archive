@@ -6,13 +6,14 @@ Image=docker.io/pihole/pihole:latest
 ContainerName=pihole
 Pod=pihole_rootless.pod
 AutoUpdate=registry
-
 Pull=never
 Timezone=local
 Environment="FTLCONF_webserver_api_password={{ pihole_secret }}"
 Environment="FTLCONF_dns_upstreams=adguard-cf#5353;adguard-goog#5353"
-
 Volume=piholedata:/etc/pihole/:z
+
+[Service]
+NoNewPrivileges=yes
 
 [Install]
 WantedBy=multi-user.target default.target

@@ -6,10 +6,11 @@ Image=docker.io/adguard/dnsproxy:latest
 ContainerName=adguard-goog
 Pod=pihole_rootless.pod
 AutoUpdate=registry
-
+Pull=never
 Exec=--listen=0.0.0.0 --port=5353 --upstream=https://8.8.8.8/dns-query --upstream https://8.8.4.4/dns-query
 
-Pull=never
+[Service]
+NoNewPrivileges=yes
 
 [Install]
 WantedBy=multi-user.target default.target

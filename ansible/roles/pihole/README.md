@@ -1,6 +1,6 @@
 # Rootless Podman Pihole Role
 
-v 1.2.0  
+v 1.2.1  
 Authored by Christian McKee - cmckee786@github.com  
 
 Implements a rootless Podman Pihole container and upstream Adguard DNS proxy containers with a rootless service account to achieve DNS over HTTPS (DoH).  
@@ -21,4 +21,4 @@ SELinux: Disabled
 
 Example `ansible-playbook` command:
 
-`ansible-playbook -i roles/pihole/files/hosts.ini playbook.yml --fork 25 -K --ask-vault-pass`
+`ansible-playbook -i roles/pihole/files/hosts.ini playbook.yml -K --ask-vault-pass`
