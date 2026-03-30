@@ -11,7 +11,7 @@ services:
     environment:
       TZ: "America/New_york"
       FTLCONF_dns_listeningMode: "all" # Required if using bridge net driver
-      FTLCONF_webserver_api_password: "" #User-defined password
+      FTLCONF_webserver_api_password: "change-me!" #User-defined password
       FTLCONF_dns_upstreams: "172.20.1.1#5353;172.20.8.8#5353"
     volumes:
       - "./data/etc:/etc/pihole/"
@@ -20,7 +20,7 @@ services:
     networks:
       - pihole
 
-  cloudflared-cf:
+  adguard-cf:
     container_name: adguard-cf
     image: adguard/dnsproxy:latest
     command: --listen=0.0.0.0 --port=5353 --upstream=https://1.1.1.1/dns-query \
@@ -30,7 +30,7 @@ services:
       pihole:
         ipv4_address: 172.20.1.1
 
-  cloudflared-goog:
+  adguard-goog:
     container_name: adguard-goog
     image: adguard/dnsproxy:latest
     command: --listen=0.0.0.0 --port=5353 --upstream=https://8.8.8.8/dns-query \
