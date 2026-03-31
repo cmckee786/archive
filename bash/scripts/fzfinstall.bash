@@ -1,4 +1,5 @@
 #!/bin/bash
+# Reference script: https://github.com/basecamp/omarchy/blob/master/bin/omarchy-pkg-install
 # Show a fuzzy-finder TUI for picking new packages to install.
 
 fzf_args=(
@@ -21,5 +22,5 @@ pkg_names=$(zypper --quiet search -t package "" | awk -F'|' '/^i/ || /^ / {print
 
 if [[ -n "$pkg_names" ]]; then
     # Convert newline-separated selections to space-separated
-    echo "$pkg_names" | tr '\n' ' ' | xargs sudo zypper in
+    echo "$pkg_names" | tr '\n' ' ' | xargs sudo zypper in --no-confirm
 fi
