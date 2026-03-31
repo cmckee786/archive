@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#v 1.1.3
+#v 1.1.4
 # Authored by Christian McKee - cmckee786@github.com
 # Made for use with Raspi's on Debian 12 and podman v4.3.1
 
@@ -28,44 +28,55 @@
 
 #NOTE: Change/remove/add global variables to match your environment
 
-USER=chris # root user is preferred method, sudo used due to raspi configurations
+USER=chris
+SERVICE_ACCOUNT=piholeserviceacc
 REMOTE_TARGET=10.0.0.182
 USER_PRIV_KEY="$HOME"/.ssh/raspi/rpi # keys may not be necessary per environment
-REMOTE_PRIV_KEY="$HOME"/.ssh/piholeserviceacc/pihole_stack
-REMOTE_KEY="$HOME"/.ssh/piholeserviceacc/pihole_stack.pub
+REMOTE_PRIV_KEY="$HOME"/.ssh/"${SERVICE_ACCOUNT}"/pihole_stack
+REMOTE_KEY="$HOME"/.ssh/"${SERVICE_ACCOUNT}"/pihole_stack.pub
 
-#NOTE: May or may not be a necessary if conditional. My remote host only accepts SSH via keys
-#	and I am required to shuffle keys into /tmp/ before I can access piholeserviceacc via key
+# May be a necessary if conditional. My remote Raspi 4B only accepts SSH via keys
+# and I am required to transfer the public key into /tmp/ before I can access
+# piholeserviceacc via ssh
 
-if [[ ! -d "$HOME"/.ssh/piholeserviceacc/ ]]; then
-	mkdir -p "$HOME"/.ssh/piholeserviceacc/
-	ssh-keygen -t ed25519 -a 32 -f "$HOME"/.ssh/piholeserviceacc/pihole_stack
-	scp -i "${USER_PRIV_KEY}" "${REMOTE_KEY}" "${USER}"@"${REMOTE_TARGET}":/tmp/
+# Ran from host
+# Create private and public key access for service account
+if [[ ! -d "$HOME"/.ssh/"${SERVICE_ACCOUNT}"/ ]]; then
+    mkdir -p "$HOME"/.ssh/"${SERVICE_ACCOUNT}"/
+    ssh-keygen -t ed25519 -a 32 -f "$HOME"/.ssh/"${SERVICE_ACCOUNT}"/pihole_stack
+    scp -i "${USER_PRIV_KEY}" "${REMOTE_KEY}" "${USER}"@"${REMOTE_TARGET}":/tmp/
 fi
 
-#NOTE: Remove -i USER_PRIV_KEY if remote target accessible by password
-#	-F /dev/null will ignore any ssh config files
-
+# Ran on Raspi 4B
+# Check for and create service account via ssh
 ssh -F /dev/null -i "${USER_PRIV_KEY}" "${USER}"@"${REMOTE_TARGET}" "\
-if ! id piholeserviceacc &>/dev/null; then \
-	sudo bash -c '
-	useradd -m -s /usr/bin/bash piholeserviceacc
-	passwd -d piholeserviceacc
-	loginctl enable-linger piholeserviceacc
-	mkdir -p /home/piholeserviceacc/.config/systemd/user/
-	mkdir -p /home/piholeserviceacc/.ssh/
-	touch /home/piholeserviceacc/.ssh/authorized_keys
-	cat /tmp/pihole_stack.pub | tee -a /home/piholeserviceacc/.ssh/authorized_keys
-	chmod 700 /home/piholeserviceacc/.ssh
-	chmod 600 /home/piholeserviceacc/.ssh/authorized_keys
-	chown -R piholeserviceacc:piholeserviceacc /home/piholeserviceacc'
+if ! id ${SERVICE_ACCOUNT} &>/dev/null; then \
+    sudo -S bash -c '
+    useradd -m -s /usr/bin/bash ${SERVICE_ACCOUNT}
+    passwd -d ${SERVICE_ACCOUNT}
+    loginctl enable-linger ${SERVICE_ACCOUNT}
+    mkdir -p /home/${SERVICE_ACCOUNT}/.config/systemd/user/
+    mkdir -p /home/${SERVICE_ACCOUNT}/.ssh/
+    touch /home/${SERVICE_ACCOUNT}/.ssh/authorized_keys
+    cat /tmp/pihole_stack.pub | tee -a /home/${SERVICE_ACCOUNT}/.ssh/authorized_keys
+    chmod 700 /home/${SERVICE_ACCOUNT}/.ssh
+    chmod 600 /home/${SERVICE_ACCOUNT}/.ssh/authorized_keys
+    chown -R ${SERVICE_ACCOUNT}:${SERVICE_ACCOUNT} /home/${SERVICE_ACCOUNT}
+    usermod --add-subuids 100000-165535 --add-subgids 100000-165535 ${SERVICE_ACCOUNT}
+    podman system migrate
+    firewall-cmd --permanent --zone=public --add-forward-port=port=80:proto=tcp:toport=8080
+    firewall-cmd --permanent --zone=public --add-forward-port=port=443:proto=tcp:toport=8443
+    firewall-cmd --permanent --zone=public --add-forward-port=port=53:proto=tcp:toport=10053
+    firewall-cmd --permanent --zone=public --add-forward-port=port=53:proto=udp:toport=10053
+    firewall-cmd --reload'
 fi"
 
 # It is far simpler to use an ssh connection and login than su or other utilities
-ssh -F /dev/null -i "${REMOTE_PRIV_KEY}" piholeserviceacc@"${REMOTE_TARGET}" "\
+ssh -F /dev/null -i "${REMOTE_PRIV_KEY}" "${SERVICE_ACCOUNT}"@"${REMOTE_TARGET}" "\
 podman pod create \
     --infra \
-    --network=slirp4netns \
+    --userns auto \
+    --network=pasta \
     -p 8080:80 \
     -p 8443:443 \
     -p 10053:53 \
@@ -73,26 +84,22 @@ podman pod create \
     pod_pihole_rootless
 
 podman create \
-    --name cloudflared-cf \
+    --name adguard-cf \
     --pod pod_pihole_rootless \
     --label 'io.containers.autoupdate=registry' \
-    -e TUNNEL_MANAGEMENT_DIAGNOSTICS=false \
-    docker.io/cloudflare/cloudflared:latest proxy-dns \
-	--address 0.0.0.0 \
-	--port 5353 \
-	--upstream https://1.1.1.1/dns-query \
-	--upstream https://1.0.0.1/dns-query
+    docker.io/adguard/dnsproxy:latest \
+	-p 5353 \
+	-u h3://1.1.1.1/dns-query \
+	-u h3://1.0.0.1/dns-query
 
 podman create \
-    --name cloudflared-goog \
+    --name adguard-goog \
     --pod pod_pihole_rootless \
     --label 'io.containers.autoupdate=registry' \
-    -e TUNNEL_MANAGEMENT_DIAGNOSTICS=false \
-    docker.io/cloudflare/cloudflared:latest proxy-dns \
-	--address 0.0.0.0 \
-	--port 5353 \
-	--upstream https://8.8.8.8/dns-query \
-	--upstream https://8.8.4.4/dns-query
+    docker.io/adguard/dnsproxy:latest \
+	-p 5353 \
+	-u h3://8.8.8.8/dns-query \
+	-u h3://8.8.4.4/dns-query
 
 podman create \
     --name pihole \
@@ -101,42 +108,25 @@ podman create \
     --cap-add SYS_NICE \
     -e TZ='America/New_York' \
     -e FTLCONF_webserver_api_password='change-me!' \
-    -e FTLCONF_dns_upstreams='cloudflared-cf#5353;cloudflared-goog#5353' \
+    -e FTLCONF_dns_upstreams='adguard-cf#5353;adguard-goog#5353' \
     -v piholedata:/etc/pihole/ \
     docker.io/pihole/pihole:latest
 
 podman pod start pod_pihole_rootless
 podman generate systemd --new -nf pod_pihole_rootless
-mv *.service /home/piholeserviceacc/.config/systemd/user/
+mv *.service /home/${SERVICE_ACCOUNT}/.config/systemd/user/
 systemctl --user enable pod-pod_pihole_rootless
 "
 
-#NOTE: From here a decision must be made whether to redirect traffic
-# or modify privileged ports after verification of successful start of pod,
-# at the very least the Pihole front end should be accessible from
-# http(s)://{host_ip}:8080/admin if firewall allows port 8080
-#
-#NOTE: Possible firewall commands - using UFW for Raspi host
-#	- ufw allow from 127.0.0.1 to any port 8080 proto tcp
-#		- This redirects the packet, note that this is not forwarding
-#	- And further, /etc/ufw/before.rules in the section before `filter`; this is required
-#	- *nat
-# 		:PREROUTING ACCEPT [0:0]
-# 		-A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
-# 		COMMIT
-# 	- Otherwise unprivileged ports will need to be lowered to at minimum 53
-# 		- This could be considered insecure as a privileged user is generally
-# 		  expected at ports below 1024
-# 		- /etc/sysctl.conf
-# 		- net.ipv4.ip_unprivileged_port_start = 53
-
-#WARN: To restart from zero:
+#NOTE: To restart from zero:
 # - From remote host:
+#   - login to service account then:
+#       - podman pod rm --force pod_pihole_rootless
+#       - exit service account
 # 	- loginctl disable-linger piholeserviceacc
 # 	- rm -rf /home/piholeserviceacc/
-# 	- pkill -u piholeserviceacc
 #	- userdel piholeserviceacc
-# - From user host and account:
+# - If you wish to delete key, from user host and account:
 #	- rm -rf /home/{USER}/.ssh/piholeserviceacc/
 # The script can then rebuild the pod from scratch and create new keys,
 # service files and pod

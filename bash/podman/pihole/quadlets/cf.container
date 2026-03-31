@@ -1,19 +1,16 @@
 [Unit]
-Description=cloudflared cloudflare DoH tunnel container
+Description=rootless adguard DoH cloudflare upstream container
 
 [Container]
-Image=docker.io/cloudflare/cloudflared:latest
-ContainerName=cloudflared-cf
+Image=docker.io/adguard/dnsproxy:latest
+ContainerName=adguard-cf
 Pod=pihole_rootless.pod
 AutoUpdate=registry
-
-Exec=proxy-dns --address 0.0.0.0 --port 5353 --upstream https://1.1.1.2/dns-query --upstream https://1.0.0.2/dns-query
-
 Pull=never
-Environment="TUNNEL_MANAGEMENT_DIAGNOSTICS=false"
+Exec=--listen=0.0.0.0 --port=5353 --upstream=https://1.1.1.1/dns-query --upstream https://1.0.0.1/dns-query
 
 [Service]
-Restart=on-failure
+NoNewPrivileges=yes
 
 [Install]
 WantedBy=multi-user.target default.target

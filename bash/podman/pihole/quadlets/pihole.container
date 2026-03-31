@@ -6,7 +6,6 @@ Image=docker.io/pihole/pihole:latest
 ContainerName=pihole
 Pod=pihole_rootless.pod
 AutoUpdate=registry
-
 Pull=never
 Timezone=local
 Environment="FTLCONF_webserver_api_password=change-me!"
