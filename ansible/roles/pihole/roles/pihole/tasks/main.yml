@@ -16,9 +16,10 @@
 - name: Secrets variables
   ansible.builtin.include_vars: secrets.yml
 
-- name: Include OS-specific setup user, and firewall tasks
-  ansible.builtin.include_tasks:
-    - setup_{{ ansible_os_family }}.yml
+- name: Include OS-specific setup, user, and firewall tasks
+  ansible.builtin.include_tasks: "{{ item }}"
+  loop:
+    - "setup_{{ ansible_facts['os_family'] }}.yml"
     - user.yml
     - firewall.yml
 

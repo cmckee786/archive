@@ -49,9 +49,9 @@
   ansible.builtin.template:
     src: templates/pihole_container.j2
     dest: /home/{{ pihole_user }}/.config/containers/systemd/pihole.container
+    owner: "{{ pihole_user }}"
+    group: "{{ pihole_user }}"
     mode: '0600'
-  become: true
-  become_user: "{{ pihole_user }}"
 
 - name: Copy over quadlets to remote host if missing
   ansible.builtin.copy:
@@ -59,7 +59,7 @@
     dest: /home/{{ pihole_user }}/.config/containers/systemd/
     owner: "{{ pihole_user }}"
     group: "{{ pihole_user }}"
-    mode: '0750'
+    mode: '0700'
   with_fileglob:
     - files/quadlets/*
 
