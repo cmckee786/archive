@@ -18,33 +18,14 @@
     - roles/pihole/defaults/main.yml
 
   tasks:
-    - name: Stop podman pod and forcibly remove
-      ansible.builtin.command: "podman pod rm --force pihole_rootless"
-      register: removed
-      changed_when: removed.rc == 0
-      become: true
-      become_user: "{{ pihole_user }}"
-
-    - name: Stop podman pod and remove volume
-      ansible.builtin.command: "podman volume rm piholedata"
-      register: volume
-      changed_when: volume.rc == 0
-      failed_when: volume.rc != 0 and "error" in volume.stdout
-      become: true
-      become_user: "{{ pihole_user }}"
-
     - name: Disable linger for pihole service account
       ansible.builtin.command: "loginctl disable-linger {{ pihole_user }}"
-      args:
-        removes: /var/lib/systemd/linger/{{ pihole_user }}
 
-    - name: Delete system user
+    - name: Delete service account
       ansible.builtin.user:
         name: "{{ pihole_user }}"
         state: absent
-        system: true
-      until: true
-      delay: 2
+        force: true
 
     - name: Remove necessary user home directories
       ansible.builtin.file:
@@ -57,7 +38,7 @@
         zone: public
         immediate: true
         permanent: true
-        state: disabled
+        state: absent
       loop:
         - rich_rule: rule family=ipv4 forward-port port=80 protocol=tcp to-port=8080
         - rich_rule: rule family=ipv4 forward-port port=443 protocol=tcp to-port=8443

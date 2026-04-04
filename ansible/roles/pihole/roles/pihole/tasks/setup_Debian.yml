@@ -1,5 +1,4 @@
 ---
-
 - name: Debian - install packages
   ansible.builtin.apt:
     name:

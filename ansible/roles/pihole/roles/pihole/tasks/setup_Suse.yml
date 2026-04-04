@@ -1,5 +1,4 @@
 ---
-
 - name: RHEL - install packages
   ansible.builtin.zypper:
     name:
