@@ -1,8 +1,6 @@
 ---
 - name: RHEL - install packages
   ansible.builtin.dnf:
-    name:
-      - podman
-      - firewalld
+    name: "{{ packages }}"
     state: present
     update_cache: true

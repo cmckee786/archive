@@ -1,3 +1,4 @@
 ---
 pihole_user: piholeserviceacc
 podman_images: [docker.io/pihole/pihole:latest, docker.io/adguard/dnsproxy:latest]
+packages: [podman, firewalld]

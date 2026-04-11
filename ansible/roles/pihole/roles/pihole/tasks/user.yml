@@ -55,8 +55,7 @@
     - files/quadlets/*
 
 - name: Pull images to service account
-  ansible.builtin.command: "podman pull {{ item }}"
-  loop: "{{ podman_images }}"
+  ansible.builtin.command: "podman pull {{ podman_images }}"
   become_user: "{{ pihole_user }}"
   become: true
 
