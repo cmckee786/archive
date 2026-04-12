@@ -57,10 +57,8 @@
 - name: Pull images to service account
   ansible.builtin.command: "podman pull {{ podman_images }}"
   become_user: "{{ pihole_user }}"
-  become: true
 
 - name: Implement sub(g)uid changes if necessary
   ansible.builtin.command: podman system migrate
   become_user: "{{ pihole_user }}"
-  become: true
   when: subuidline.changed or subgidline.changed
