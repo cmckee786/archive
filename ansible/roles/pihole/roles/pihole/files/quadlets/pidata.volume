@@ -1,4 +1,4 @@
 [Volume]
 VolumeName=piholedata
-User=piholeserviceacc
-Group=piholeserviceacc
+User="{{ pihole_user }}"
+Group="{{ pihole_user }}"
