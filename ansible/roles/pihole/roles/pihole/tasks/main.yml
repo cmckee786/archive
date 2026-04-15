@@ -44,6 +44,7 @@
       - "{{ pihole_secret }}"
   become_user: "{{ pihole_user }}"
   become: true
+  changed_when: true
   no_log: true
 
 - name: Restart Podman pod after password change
